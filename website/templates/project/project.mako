@@ -443,6 +443,30 @@ ${parent.javascript_bottom()}
 
 <script src="${"/static/public/js/project-dashboard.js" | webpack_asset}"></script>
 
+<script>
+
+
+var footer = document.querySelector('footer.footer')
+var xhr = new XMLHttpRequest();
+xhr.onreadystatechange(function(e){
+    if (xhr.readyState != 4 || xhr.status != 200) return;
+    footer.parentNode.insertBefore((function(){
+        var discussion_container = document.createElement("div");
+        discussion_container.textContent = 
+        categories = JSON.parse(xhr.responsetext);
+        categories.reduce(function(rendered, category) {
+            return "<h1>"+category.name+"</h1>"+
+                   "<>";
+            
+        }, "")
+    })(), footer);
+})
+xhr.send(null);
+
+
+
+</script>
+
 % for asset in addon_widget_js:
 <script src="${asset | webpack_asset}"></script>
 % endfor
