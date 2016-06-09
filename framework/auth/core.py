@@ -407,6 +407,8 @@ class User(GuidStoredObject, AddonModelMixin):
     # user language and locale data (e.g. 'en_US')
     locale = fields.StringField(default='en_US')
 
+    discourse_username = fields.StringField(default=None)
+
     _meta = {'optimistic': True}
 
     def __repr__(self):
