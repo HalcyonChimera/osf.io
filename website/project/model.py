@@ -20,7 +20,7 @@ from modularodm.validators import MaxLengthValidator
 from modularodm.exceptions import NoResultsFound
 from modularodm.exceptions import ValidationValueError
 
-from framework import status
+from framework import status, discourse
 from framework.mongo import ObjectId
 from framework.mongo import StoredObject
 from framework.mongo import validators
@@ -894,6 +894,10 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin, Commentable):
 
     notification_settings_dirty = fields.BooleanField(default=False)
 
+    discourse_group_id = fields.StringField(default=None)
+    discourse_category_id = fields.StringField(default=None)
+    discourse_topic_id = fields.StringField(default=None)
+
     _meta = {
         'optimistic': True,
     }
@@ -1583,6 +1587,9 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin, Commentable):
         # This method checks what has changed.
         if settings.PIWIK_HOST and update_piwik:
             piwik_tasks.update_node(self._id, saved_fields)
+
+        # For project public/private and contributors
+        discourse.sync_project(self)
 
         # Return expected value for StoredObject::save
         return saved_fields
