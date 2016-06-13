@@ -130,13 +130,13 @@ def configure_server_settings():
         url.args[key] = val
         url.args['api_key'] = settings.DISCOURSE_API_KEY
         url.args['api_username'] = settings.DISCOURSE_API_ADMIN_USER
-
+        import time; time.sleep(0.2)
         result = requests.put(url.url)
         if result.status_code != 200:
             raise DiscourseException('Discourse server responded to setting request with '
                                      + str(result.status_code) + ' ' + result.text)
     _config_embeddable_host()
-    _config_customization()
+    #_config_customization()
 
 
 def create_group(project_node):
@@ -174,6 +174,8 @@ def update_group_visibility(project_node):
     url.args['api_username'] = settings.DISCOURSE_API_ADMIN_USER
 
     url.args['visible'] = 'true' if project_node.is_public else 'false'
+
+    #import pdb; pdb.set_trace()
 
     result = requests.put(url.url)
     if result.status_code != 200:
@@ -262,8 +264,8 @@ def create_category(project_node):
     url.args['api_key'] = settings.DISCOURSE_API_KEY
     url.args['api_username'] = settings.DISCOURSE_API_ADMIN_USER
 
-    url.args['name'] = project_node.title + ' / ' + project_node._id
-    url.args['slug'] = slugify(project_node.title + '-' + project_node._id)
+    url.args['name'] = project_node.title
+    url.args['slug'] = project_node._id
     url.args['color'] = 'AB9364'
     url.args['text_color'] = 'FFFFFF'
     url.args['allow_badges'] = 'true'
@@ -396,6 +398,12 @@ def create_topic(node):
 
     # we can't do a more elegant isinstance check because that
     # causes import errors with circular referencing.
+    
+    #import ipdb; ipdb.set_trace()
+
+    if 'page_name' in node:
+        
+
     try:
         node_type = 'wiki'
         node_title = 'Wiki page: ' + node.page_name
@@ -419,8 +427,8 @@ def create_topic(node):
 
     category_id = get_or_create_category_id(project_node)
     url.args['category'] = category_id
-    url.args['title'] = node_title
-    url.args['raw'] = 'This is the discussion topic for ' + node_description + '. What do you think about it?'
+    url.args['title'] = node._id
+    url.args['raw'] = node_title + '\nThis is the discussion topic for ' + node_description + '. What do you think about it?'
 
     if node_type == 'file':
         file_url = furl(settings.DOMAIN).join(node.get_persistant_guid()._id).url

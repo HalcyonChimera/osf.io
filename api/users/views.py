@@ -41,6 +41,7 @@ class UserMixin(object):
             if isinstance(current_user, AnonymousUser):
                 raise NotAuthenticated
             else:
+                #import pdb; pdb.set_trace()
                 return self.request.user
 
         obj = get_object_or_error(User, key, 'user')
@@ -124,6 +125,7 @@ class UserList(JSONAPIBaseView, generics.ListAPIView, ODMFilterMixin):
     def get_queryset(self):
         # TODO: sort
         query = self.get_query_from_request()
+
         return User.find(query)
 
 
