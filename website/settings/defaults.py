@@ -50,8 +50,8 @@ LOAD_BALANCER = False
 PROXY_ADDRS = []
 
 # May set these to True in local.py for development
-DEV_MODE = False
-DEBUG_MODE = False
+DEV_MODE = True
+DEBUG_MODE = True
 
 LOG_PATH = os.path.join(APP_PATH, 'logs')
 TEMPLATES_PATH = os.path.join(BASE_PATH, 'templates')
@@ -60,8 +60,8 @@ ANALYTICS_PATH = os.path.join(BASE_PATH, 'analytics')
 CORE_TEMPLATES = os.path.join(BASE_PATH, 'templates/log_templates.mako')
 BUILT_TEMPLATES = os.path.join(BASE_PATH, 'templates/_log_templates.mako')
 
-DOMAIN = 'http://localhost:5000/'
-API_DOMAIN = 'http://localhost:8000/'
+DOMAIN = 'http://mechanysm.com/'
+API_DOMAIN = 'http://api.mechanysm.com/'
 GNUPG_HOME = os.path.join(BASE_PATH, 'gpg')
 GNUPG_BINARY = 'gpg'
 
@@ -81,7 +81,7 @@ SHARE_ELASTIC_INDEX_TEMPLATE = 'share_v{}'
 
 # Sessions
 # TODO: Override OSF_COOKIE_DOMAIN in local.py in production
-OSF_COOKIE_DOMAIN = None
+OSF_COOKIE_DOMAIN = '.mechanysm.com'
 COOKIE_NAME = 'osf'
 # TODO: Override SECRET_KEY in local.py in production
 SECRET_KEY = 'CHANGEME'
@@ -97,9 +97,9 @@ FROM_EMAIL = 'openscienceframework-noreply@osf.io'
 SUPPORT_EMAIL = 'support@osf.io'
 
 # SMTP Settings
-MAIL_SERVER = 'smtp.sendgrid.net'
-MAIL_USERNAME = 'osf-smtp'
-MAIL_PASSWORD = ''  # Set this in local.py
+MAIL_SERVER = 'smtp.sendgrid.org'
+MAIL_USERNAME = 'halcyonchimera'
+MAIL_PASSWORD = 'codetheworldinto0blivi0n'  # Set this in local.py
 
 # OR, if using Sendgrid's API
 SENDGRID_API_KEY = None
@@ -153,9 +153,9 @@ SESSION_HISTORY_IGNORE_RULES = [
 ]
 
 # TODO: Configuration should not change between deploys - this should be dynamic.
-CANONICAL_DOMAIN = 'openscienceframework.org'
-COOKIE_DOMAIN = '.openscienceframework.org'  # Beaker
-SHORT_DOMAIN = 'osf.io'
+CANONICAL_DOMAIN = 'mechanysm.com'
+COOKIE_DOMAIN = '.mechanysm.com'  # Beaker
+SHORT_DOMAIN = 'mecahnysm.com'
 
 # TODO: Combine Python and JavaScript config
 COMMENT_MAXLENGTH = 500
@@ -263,7 +263,7 @@ PINGDOM_ID = None
 
 DEFAULT_HMAC_SECRET = 'changeme'
 DEFAULT_HMAC_ALGORITHM = hashlib.sha256
-WATERBUTLER_URL = 'http://localhost:7777'
+WATERBUTLER_URL = 'http://wb.mechanysm.com'
 WATERBUTLER_ADDRS = ['127.0.0.1']
 
 # Test identifier namespaces
@@ -280,8 +280,8 @@ USE_SHARE = True
 SHARE_REGISTRATION_URL = ''
 SHARE_API_DOCS_URL = ''
 
-CAS_SERVER_URL = 'http://localhost:8080'
-MFR_SERVER_URL = 'http://localhost:7778'
+CAS_SERVER_URL = 'http://accounts.mechanysm.com'
+MFR_SERVER_URL = 'http://mfr.mechanysm.com'
 
 ###### ARCHIVER ###########
 ARCHIVE_PROVIDER = 'osfstorage'
@@ -467,29 +467,29 @@ ESI_MEDIA_TYPES = {'application/vnd.api+json', 'application/json'}
 GITHUB_API_TOKEN = None
 
 DISCOURSE_SSO_SECRET = 'changeme'
-DISCOURSE_SERVER_URL = 'http://192.168.99.100'
-DISCOURSE_API_KEY = 'changeme'
-DISCOURSE_API_ADMIN_USER = 'changeme'
+DISCOURSE_SERVER_URL = 'http://discourse.mechanysm.com'
+DISCOURSE_API_KEY = 'b1dc7fb37025f47d6cd5f109f8676819215440046c9df9e361949d3bfe54f137'
+DISCOURSE_API_ADMIN_USER = 'system'
 
 DISCOURSE_SERVER_SETTINGS = {'title': 'Open Science Framework',
                              'site_description': 'A scholarly commons to connect the entire research cycle',
-                             'contact_email': 'changeme',
+                             'contact_email': 'joshu.thomas.bird@gmail.com',
                              'contact_url': '',
                              'notification_email': 'noreply@osf.io',
                              'site_contact_username': 'system',
                              'logo_url': '',
                              'logo_small_url': '',
-                             'favicon_url': 'http://localhost:5000/favicon.ico',
+                             'favicon_url': 'http://mechanysm.com/favicon.ico',
                              'enable_local_logins': 'false',
                              'enable_sso': 'true',
-                             'sso_url': 'http://localhost:8000/v2/sso',
+                             'sso_url': 'http://api.mechanysm.com/v2/sso',
                              'sso_secret': DISCOURSE_SSO_SECRET,
                              'sso_overrides_email': 'true',
                              'sso_overrides_username': 'true',
                              'sso_overrides_name': 'true',
                              'sso_overrides_avatar': 'true',
-                             'logout_redirect': 'http://localhost:5000/logout',
-                             'cors_origins': 'http://localhost:5000',
+                             'logout_redirect': 'http://mechanysm.com/logout',
+                             'cors_origins': 'http://mechanysm.com',
                              'min_topic_title_length': '0',
                              'title_min_entropy': '0',
                              'title_prettify': 'false',

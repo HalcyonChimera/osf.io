@@ -30,7 +30,8 @@ DEBUG = osf_settings.DEBUG_MODE
 DEBUG_PROPAGATE_EXCEPTIONS = True
 
 ALLOWED_HOSTS = [
-    '.osf.io'
+    '.osf.io',
+    '.mechanysm.com'
 ]
 
 
