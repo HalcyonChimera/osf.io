@@ -362,10 +362,11 @@ def delete_category(project_node):
 
 def sync_project(project_node):
     sync_group(project_node)
-    if project_node._id in project_node.tags:
+    if not project_node._id in project_node.tags:
+        create_topic(project_node)
         project_node.tags.append(project_node._id)
-    else:
-        update_category(project_node, category_id)
+    
+    #update_category(project_node, category_id)
 
 def delete_project(project_node):
     delete_category(project_node)
@@ -392,7 +393,7 @@ def _escape_markdown(text):
 
 def create_topic(node):
     project_node = _get_project_node(node)
-    sync_project(project_node)
+    #sync_project(project_node)
 
     url = furl(settings.DISCOURSE_SERVER_URL).join('/posts')
     url.args['api_key'] = settings.DISCOURSE_API_KEY
@@ -432,8 +433,6 @@ def create_topic(node):
     url.args['title'] = node._id
     url.args['tags[]'] = node._id
 
-    
-
     license = node.license
     if not license:
         license = u""
@@ -458,6 +457,7 @@ def create_topic(node):
     topic_id = result.json()['topic_id']
 
     node.discourse_topic_id = topic_id
+    node.discourse_tags.append(node._id)
     node.save()
 
     #import ipdb; ipdb.set_trace()
