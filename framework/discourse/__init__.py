@@ -434,6 +434,8 @@ def create_topic(node):
     url.args['category'] = '1' #Category id '1' is 'Uncategorized'
     url.args['title'] = node._id
     url.args['tags[]'] = node._id
+    url.args['archetype'] = 'private_message'
+    url.args['target_usernames'] = ','.join(node.contributors)
 
     license = node.license
     if not license:
