@@ -36,7 +36,7 @@
                         </li>
                     % if not node['is_retracted']:
                         <li id="projectNavFiles">
-                            <a href="http://discourse.mechanysm.com/t${node['id']}/">
+                            <a href="http://discourse.mechanysm.com/t/${node['id']}/">
                                 Files
                             </a>
                         </li>

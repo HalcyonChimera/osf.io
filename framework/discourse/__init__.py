@@ -260,6 +260,9 @@ def delete_group(project_node):
     project_node.discourse_group_id = None
 
 def create_category(project_node):
+
+    import ipdb; ipdb.set_trace()
+
     url = furl(settings.DISCOURSE_SERVER_URL).join('/categories')
     url.args['api_key'] = settings.DISCOURSE_API_KEY
     url.args['api_username'] = settings.DISCOURSE_API_ADMIN_USER
@@ -293,8 +296,8 @@ def update_category(project_node, category_id):
     url.args['api_key'] = settings.DISCOURSE_API_KEY
     url.args['api_username'] = settings.DISCOURSE_API_ADMIN_USER
 
-    url.args['name'] = project_node.title + ' / ' + project_node._id
-    url.args['slug'] = slugify(project_node.title + '-' + project_node._id)
+    url.args['name'] = project_node.title
+    url.args['slug'] = project_node._id
     url.args['color'] = 'AB9364'
     url.args['text_color'] = 'FFFFFF'
     url.args['allow_badges'] = 'true'
@@ -401,7 +404,7 @@ def create_topic(node):
     
     #import ipdb; ipdb.set_trace()
 
-    if 'page_name' in node:
+    #if 'page_name' in node:
         
 
     try:
@@ -425,10 +428,19 @@ def create_topic(node):
     #elif isinstance(node, NodeWikiPage):
     #    node_title = 'the wiki page ' + node.page_name
 
-    category_id = get_or_create_category_id(project_node)
-    url.args['category'] = category_id
+    #category_id = get_or_create_category_id(project_node)
+    url.args['category'] = '1' #Category id '1' is 'Uncategorized'
     url.args['title'] = node._id
-    url.args['raw'] = node_title + '\nThis is the discussion topic for ' + node_description + '. What do you think about it?'
+    url.args['tags[]'] = node._id
+
+    
+
+    license = node.license
+    if not license:
+        license = u""
+    
+    #import ipdb; ipdb.set_trace()
+    url.args['raw'] = '`' + node_title + '`Contributors: ' + ', '.join(map(lambda c: c._id, node.contributors)) + '\nDate Created: ' + node.date_created.strftime("%Y-%m-%d %H:%M:%S") + '\nCategory: ' + node.category + '\nDescription: '+ node.description  + '\nLicense: ' + license
 
     if node_type == 'file':
         file_url = furl(settings.DOMAIN).join(node.get_persistant_guid()._id).url
@@ -443,6 +455,8 @@ def create_topic(node):
 
     node.discourse_topic_id = topic_id
     node.save()
+
+    #import ipdb; ipdb.set_trace()
 
     return topic_id
 
