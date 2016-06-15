@@ -38,6 +38,7 @@ from framework.analytics import (
 from framework.sentry import log_exception
 from framework.transactions.context import TokuTransaction
 from framework.utils import iso8601format
+from framework.discourse import create_comment
 
 from website import language, settings
 from website.util import web_url_for
@@ -913,6 +914,7 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin, Commentable):
     discourse_group_id = fields.StringField(default=None)
     discourse_category_id = fields.StringField(default=None)
     discourse_topic_id = fields.StringField(default=None)
+    discourse_tags = fields.StringField(list=True)
 
     _meta = {
         'optimistic': True,
@@ -1520,6 +1522,8 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin, Commentable):
                     }
                 },
                 auth=auth)
+        #celery queue
+        discourse.create_comment(self, "{} updated {} {}".format(auth.user, self.project_or_component, values), 'system')
         return updated
 
     def save(self, *args, **kwargs):
@@ -1603,7 +1607,7 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin, Commentable):
             piwik_tasks.update_node(self._id, saved_fields)
 
         # For project public/private and contributors
-        discourse.sync_project(self)
+        #discourse.sync_project(self)
 
         # Return expected value for StoredObject::save
         return saved_fields
