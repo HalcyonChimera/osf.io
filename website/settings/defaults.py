@@ -99,9 +99,9 @@ FROM_EMAIL = 'openscienceframework-noreply@osf.io'
 SUPPORT_EMAIL = 'support@osf.io'
 
 # SMTP Settings
-MAIL_SERVER = 'smtp.sendgrid.org'
-MAIL_USERNAME = 'halcyonchimera'
-MAIL_PASSWORD = 'codetheworldinto0blivi0n'  # Set this in local.py
+MAIL_SERVER = 'changeme'
+MAIL_USERNAME = 'changeme'
+MAIL_PASSWORD = 'changeme'  # Set this in local.py
 
 # OR, if using Sendgrid's API
 SENDGRID_API_KEY = None
