@@ -321,7 +321,7 @@ def _escape_markdown(text):
 
     
 def create_topic(node):
-    
+    import ipdb; ipdb.set_trace() 
     try:
         node_type = 'wiki'
         node_guid = node._id
@@ -330,7 +330,7 @@ def create_topic(node):
     except AttributeError:
         try:
             node_type = 'file'
-            node_guid = node.get_guid()._id
+            node_guid = node._id
             node_title = 'File: ' + node.name
             node_description = 'the file ' + _escape_markdown(node.name)
         except AttributeError:
@@ -342,16 +342,16 @@ def create_topic(node):
 
 
     project_node = _get_project_node(node)
-    parent_node = project_node
+    #parent_node = project_node
     
 
-    discourse_tags = []
+    discourse_tags = [node_id]
 
-    if parent_node is node:
-        parent_node = node.parent
-    while parent_node:
-        discourse_tags.append(str(parent_node._id))
-        parent_node = parent_node.parent
+    #if parent_node is node:
+    #    parent_node = t
+    #while parent_node:
+    #    discourse_tags.append(str(parent_node._id))
+    #    parent_node = parent_node.parent
 
 
     get_or_create_group_id(project_node) # insure existance of the group
@@ -396,7 +396,6 @@ def create_topic(node):
         'tags[]': discourse_tags,
         'archetype': 'private_message',
         'target_usernames': ','.join(map(lambda c: c._id, node.contributors)),
-        #'api_username': node.creator._id,
         'api_username': settings.DISCOURSE_API_ADMIN_USER,
         'api_key': settings.DISCOURSE_API_KEY
     }
