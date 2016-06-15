@@ -362,9 +362,8 @@ def delete_category(project_node):
 
 def sync_project(project_node):
     sync_group(project_node)
-    category_id = project_node.discourse_category_id
-    if category_id is None:
-        create_category(project_node)
+    if project_node_id in project_node.tags:
+        project_node.tags.append(project_node._id)
     else:
         update_category(project_node, category_id)
 
@@ -440,7 +439,12 @@ def create_topic(node):
         license = u""
     
     #import ipdb; ipdb.set_trace()
-    url.args['raw'] = '`' + node_title + '`Contributors: ' + ', '.join(map(lambda c: c._id, node.contributors)) + '\nDate Created: ' + node.date_created.strftime("%Y-%m-%d %H:%M:%S") + '\nCategory: ' + node.category + '\nDescription: '+ node.description  + '\nLicense: ' + license
+    url.args['raw'] = '`' + node_title 
+    url.args['raw'] += '`Contributors: ' + ', '.join(map(lambda c: c._id, node.contributors))
+    url.args['raw'] += '\nDate Created: ' + node.date_created.strftime("%Y-%m-%d %H:%M:%S")
+    url.args['raw'] += '\nCategory: ' + node.category
+    url.args['raw'] += '\nDescription: '+ node.description
+    url.args['raw'] += '\nLicense: ' + license
 
     if node_type == 'file':
         file_url = furl(settings.DOMAIN).join(node.get_persistant_guid()._id).url
