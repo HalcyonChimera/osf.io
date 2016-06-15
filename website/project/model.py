@@ -912,7 +912,6 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin, Commentable):
     alternative_citations = fields.ForeignField('alternativecitation', list=True)
 
     discourse_group_id = fields.StringField(default=None)
-    discourse_category_id = fields.StringField(default=None)
     discourse_topic_id = fields.StringField(default=None)
     discourse_tags = fields.StringField(list=True)
 
@@ -1607,7 +1606,7 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin, Commentable):
             piwik_tasks.update_node(self._id, saved_fields)
 
         # For project public/private and contributors
-        #discourse.sync_project(self)
+        discourse.sync_project(self)
 
         # Return expected value for StoredObject::save
         return saved_fields

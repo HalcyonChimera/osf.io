@@ -1,48 +1,77 @@
 from framework.sessions import session
 from framework.auth import User
+import api.sso
 
 from django.utils.text import slugify
 
 import requests
 import re
 from furl import furl
-import pdb
+import time
+import ipdb
 
 from website import settings
 
 class DiscourseException(Exception):
     pass
 
+def create_user(user):
+    url = furl(settings.DISCOURSE_SERVER_URL).join('/admin/users/sync_sso')
+
+    payload = {}
+    payload['external_id'] = user._id
+    payload['email'] = user.username
+    payload['username'] = user._id
+    payload['name'] = user.fullname
+    payload['avatar_url'] = user.profile_image_url()
+
+    url.args = api.sso.sign_payload(payload)
+    url.args['api_key'] = settings.DISCOURSE_API_KEY
+    url.args['api_username'] = settings.DISCOURSE_API_ADMIN_USER
+
+    result = requests.post(url.url)
+
+    if result.status_code != 200:
+        raise DiscourseException('Discourse server responded to user create/sync request '
+                                 + url.url + ' with '
+                                 + str(result.status_code) + ' ' + result.text)
+
+    user.discourse_user_id = result.json()['id']
+    user.discourse_user_created = True
+    user.save()
+
+    return result.json()
+
+def delete_user(user):
+    if not user.discourse_user_created:
+        return
+
+    url = furl(settings.DISCOURSE_SERVER_URL).join('/admin/users/' + str(user.discourse_user_id))
+    url.args['api_key'] = settings.DISCOURSE_API_KEY
+    url.args['api_username'] = settings.DISCOURSE_API_ADMIN_USER
+
+    result = requests.delete(url.url)
+
+    if result.status_code != 200:
+        raise DiscourseException('Discourse server responded to user delete request '
+                                 + url.url + ' with '
+                                 + str(result.status_code) + ' ' + result.text)
+
+    user.discourse_user_id = 0
+    user.discourse_user_created = False
+    user.save()
+
 def get_username(user=None):
-    for_current_user = user is None
-    if for_current_user:
+    if user is None:
         if 'auth_user_id' in session.data:
             user_id = session.data['auth_user_id']
             user = User.load(user_id)
         else:
             return None
 
-    if user.discourse_username:
-        return user.discourse_username
-
-    url = furl(settings.DISCOURSE_SERVER_URL).join('/users/by-external/' + user._id + '.json')
-    url.args['api_key'] = settings.DISCOURSE_API_KEY
-    url.args['api_username'] = settings.DISCOURSE_API_ADMIN_USER
-
-    result = requests.get(url.url)
-    if result.status_code == 404:
-        return None
-    elif result.status_code != 200:
-        raise DiscourseException('Discourse server responded to user request '
-                                 + url.url + ' with '
-                                 + str(result.status_code) + ' ' + result.text)
-
-    username = result.json()['user']['username']
-
-    user.discourse_username = username
-    user.save()
-
-    return username
+    if not user.discourse_user_created:
+        create_user(user)
+    return user._id
 
 def logout():
     username = get_username()
@@ -123,6 +152,7 @@ def _config_customization():
         if result.status_code != 201:
             raise DiscourseException('Discourse server responded to setting customization with '
                                      + str(result.status_code) + ' ' + result.text)
+        time.sleep(0.1)
 
 def configure_server_settings():
     for key, val in settings.DISCOURSE_SERVER_SETTINGS.items():
@@ -130,14 +160,14 @@ def configure_server_settings():
         url.args[key] = val
         url.args['api_key'] = settings.DISCOURSE_API_KEY
         url.args['api_username'] = settings.DISCOURSE_API_ADMIN_USER
-        import time; time.sleep(0.2)
+        time.sleep(0.2)
         result = requests.put(url.url)
         if result.status_code != 200:
             raise DiscourseException('Discourse server responded to setting request with '
                                      + str(result.status_code) + ' ' + result.text)
+        time.sleep(0.1)
     _config_embeddable_host()
     #_config_customization()
-
 
 def create_group(project_node):
     url = furl(settings.DISCOURSE_SERVER_URL).join('/admin/groups')
@@ -146,6 +176,7 @@ def create_group(project_node):
 
     url.args['name'] = project_node._id
     url.args['visible'] = 'true' if project_node.is_public else 'false'
+    url.args['alias_level'] = '3' # allows to message this group directly
 
     result = requests.post(url.url)
     if result.status_code != 200:
@@ -158,24 +189,24 @@ def create_group(project_node):
     project_node.discourse_group_id = group_id
     project_node.save()
 
-    return group_id
+    return result.json()
 
 def get_or_create_group_id(project_node):
-    group_id = project_node.discourse_group_id
-    if group_id is not None:
-        return group_id
-    return create_group(project_node)
+    if project_node.discourse_group_id is None:
+        sync_group(project_node)
+    return project_node.discourse_group_id
 
 def update_group_visibility(project_node):
-    group_id = get_or_create_group_id(project_node)
-
+    group_id = project_node.discourse_group_id
+    if group_id is None:
+        create_group(project_node)
+        return
+    
     url = furl(settings.DISCOURSE_SERVER_URL).join('/admin/groups/' + str(group_id))
     url.args['api_key'] = settings.DISCOURSE_API_KEY
     url.args['api_username'] = settings.DISCOURSE_API_ADMIN_USER
 
     url.args['visible'] = 'true' if project_node.is_public else 'false'
-
-    #import pdb; pdb.set_trace()
 
     result = requests.put(url.url)
     if result.status_code != 200:
@@ -259,60 +290,6 @@ def delete_group(project_node):
 
     project_node.discourse_group_id = None
 
-def create_category(project_node):
-
-    import ipdb; ipdb.set_trace()
-
-    url = furl(settings.DISCOURSE_SERVER_URL).join('/categories')
-    url.args['api_key'] = settings.DISCOURSE_API_KEY
-    url.args['api_username'] = settings.DISCOURSE_API_ADMIN_USER
-
-    url.args['name'] = project_node.title
-    url.args['slug'] = project_node._id
-    url.args['color'] = 'AB9364'
-    url.args['text_color'] = 'FFFFFF'
-    url.args['allow_badges'] = 'true'
-
-    # ensure group exists
-    get_or_create_group_id(project_node)
-    url.args['permissions[' + project_node._id + ']'] = '1'
-    if project_node.is_public:
-        url.args['permissions[everyone]'] = '2'
-
-    result = requests.post(url.url)
-    if result.status_code != 200:
-        raise DiscourseException('Discourse server responded to category create request ' + result.url + ' with '
-                                 + str(result.status_code) + ' ' + result.text)
-
-    category_id = result.json()['category']['id']
-
-    project_node.discourse_category_id = category_id
-    project_node.save()
-
-    return category_id
-
-def update_category(project_node, category_id):
-    url = furl(settings.DISCOURSE_SERVER_URL).join('/categories/' + str(category_id))
-    url.args['api_key'] = settings.DISCOURSE_API_KEY
-    url.args['api_username'] = settings.DISCOURSE_API_ADMIN_USER
-
-    url.args['name'] = project_node.title
-    url.args['slug'] = project_node._id
-    url.args['color'] = 'AB9364'
-    url.args['text_color'] = 'FFFFFF'
-    url.args['allow_badges'] = 'true'
-
-    # ensure group exists
-    get_or_create_group_id(project_node)
-    url.args['permissions[' + project_node._id + ']'] = '1'
-    if project_node.is_public:
-        url.args['permissions[everyone]'] = '2'
-
-    result = requests.put(url.url)
-    if result.status_code != 200:
-        raise DiscourseException('Discourse server responded to category update request ' + result.url + ' with '
-                                 + str(result.status_code) + ' ' + result.text)
-
 # returns containing project OR component node
 def _get_project_node(node):
     try:
@@ -320,103 +297,70 @@ def _get_project_node(node):
     except AttributeError:
         return node
 
-def get_categories():
-    url = furl(settings.DISCOURSE_SERVER_URL).join('/categories.json')
-    url.args['api_key'] = settings.DISCOURSE_API_KEY
-    url.args['api_username'] = settings.DISCOURSE_API_ADMIN_USER
-
-    result = requests.get(url.url)
-    if result.status_code != 200:
-        raise DiscourseException('Discourse server responded to category info request ' + result.url + ' with '
-                                 + str(result.status_code) + ' ' + result.text)
-
-    return result.json()['category_list']['categories']
-
-def get_or_create_category_id(project_node):
-    category_id = project_node.discourse_category_id
-    if category_id is not None:
-        return category_id
-    return create_category(project_node)
-
-def delete_category(project_node):
-    category_id = project_node.discourse_category_id
-    if category_id is None:
-        return
-
-    topic_ids = [topic['id'] for topic in get_topics(project_node) if not topic['pinned']]
-    for topic_id in topic_ids:
-        delete_topic(topic_id)
-
-    url = furl(settings.DISCOURSE_SERVER_URL).join('/categories/' + str(category_id))
-    url.args['api_key'] = settings.DISCOURSE_API_KEY
-    url.args['api_username'] = settings.DISCOURSE_API_ADMIN_USER
-
-    result = requests.delete(url.url)
-
-    if result.status_code != 200:
-        raise DiscourseException('Discourse server responded to category delete request '
-                                 + url.url + ' with '
-                                 + str(result.status_code) + ' ' + result.text)
-
-    project_node.discourse_category_id = None
-
 def sync_project(project_node):
     sync_group(project_node)
-    if not project_node._id in project_node.tags:
-        create_topic(project_node)
-        project_node.tags.append(project_node._id)
-    
-    #update_category(project_node, category_id)
 
 def delete_project(project_node):
-    delete_category(project_node)
     delete_group(project_node)
 
 def get_topics(project_node):
-    sync_project(project_node)
-
-    category_slug = slugify(project_node.title + '-' + project_node._id)
-    url = furl(settings.DISCOURSE_SERVER_URL).join('/c/' + category_slug + '.json')
+    url = furl(settings.DISCOURSE_SERVER_URL).join('/tags/' + project_node._id + '.json')
     url.args['api_key'] = settings.DISCOURSE_API_KEY
     url.args['api_username'] = settings.DISCOURSE_API_ADMIN_USER
 
     result = requests.get(url.url)
     if result.status_code != 200:
-        raise DiscourseException('Discourse server responded to topic get request ' + result.url + ' with '
+        raise DiscourseException('Discourse server responded to project topics get request ' + result.url + ' with '
                                  + str(result.status_code) + ' ' + result.text)
 
-    return result.json()['topic_list']['topics']
+    return result.json()
 
 def _escape_markdown(text):
     r = re.compile(r'([\\`*_{}[\]()#+.!-])')
     return r.sub(r'\\\1', text)
 
+    
 def create_topic(node):
-    project_node = _get_project_node(node)
-    if project_node.discourse_topic_id:
-        return project_node.discourse_topic_id
-    #sync_project(project_node)
-
-    url = furl
+    
     try:
         node_type = 'wiki'
+        node_guid = node._id
         node_title = 'Wiki page: ' + node.page_name
         node_description = 'the wiki page ' + _escape_markdown(node.page_name)
     except AttributeError:
         try:
             node_type = 'file'
+            node_guid = node.get_guid()._id
             node_title = 'File: ' + node.name
             node_description = 'the file ' + _escape_markdown(node.name)
         except AttributeError:
                 node_type = 'project'
+                node_guid = node._id
                 node_title = node.title
                 node_description = _escape_markdown(node.title)
 
+
+
+    project_node = _get_project_node(node)
+    parent_node = project_node
+    
+
+    discourse_tags = []
+
+    if parent_node is node:
+        parent_node = node.parent
+    while parent_node:
+        discourse_tags.append(str(parent_node._id))
+        parent_node = parent_node.parent
+
+
+    get_or_create_group_id(project_node) # insure existance of the group
+
+
     license = node.license
     if not license:
-        license = u""
+        license = u"No License"
     
-    #import ipdb; ipdb.set_trace()
 
     topic_content = '`' + node_title 
     
@@ -430,14 +374,26 @@ def create_topic(node):
     topic_content += '\nDescription: ' + node.description
     topic_content += '\nLicense: ' + license
 
-    #import ipdb; ipdb.set_trace()
+
+    if node_type == 'file':
+        file_url = furl(settings.DOMAIN).join(node_guid).url
+        url.args['raw'] += '\nFile url: ' + file_url + '/'
+
+
+    url.path.add('/posts')
+
+    project_node = _get_project_node(node)
+    if project_node.is_public:
+        url.args['archetype'] = 'regular'
+    else:
+        url.args['archetype'] = 'private_message'
 
     payload = {
         'raw': topic_content,
         'category': '',
         'is_warning': 'false',
-        'title': node._id,
-        'tags[]': node._id,
+        'title': node_guid,
+        'tags[]': discourse_tags,
         'archetype': 'private_message',
         'target_usernames': ','.join(map(lambda c: c._id, node.contributors)),
         #'api_username': node.creator._id,
@@ -445,39 +401,49 @@ def create_topic(node):
         'api_key': settings.DISCOURSE_API_KEY
     }
 
-    result = requests.post(settings.DISCOURSE_SERVER_URL + '/posts', data=payload)
+    result = requests.post(settings.DISCOURSE_SERVER_URL + '/posts', json=payload)
     
     if result.status_code != 200:
         raise DiscourseException('Discourse server responded to topic create request ' + result.url + ' with '
                                  + str(result.status_code) + ' ' + result.text)
 
-    topic_id = result.json()['topic_id']
-
-    node.discourse_topic_id = topic_id
-    #import ipdb; ipdb.set_trace()
-    node.discourse_tags
+    node.discourse_topic_id = result.json()['topic_id']
     node.save()
 
-    #import ipdb; ipdb.set_trace()
+    return result.json()
 
-    return topic_id
+def _convert_topic_privacy(node):
+    url = furl(settings.DISCOURSE_SERVER_URL).join('/t/' + str(node.discourse_topic_id) + '/convert-topic')
+    project_node = _get_project_node(node)
+    url.path.add('/public' if project_node.is_public else '/private')
+
+    url.args['api_key'] = settings.DISCOURSE_API_KEY
+    url.args['api_username'] = settings.DISCOURSE_API_ADMIN_USER
+
+    result = requests.put(url.url)
+    if result.status_code != 200:
+        raise DiscourseException('Discourse server responded to topic privacy update request ' + result.url + ' with '
+                                 + str(result.status_code) + ' ' + result.text[:500])
+
+def update_topic(node):
+    _convert_topic_privacy(node)
+
+    url = _create_or_update_topic_base_url(node)
+    url.path.add('/posts/' + str(node.discourse_topic_id))
+
+    result = requests.put(url.url)
+    if result.status_code != 200:
+        raise DiscourseException('Discourse server responded to topic update request ' + result.url + ' with '
+                                 + str(result.status_code) + ' ' + result.text)
 
 def get_or_create_topic_id(node):
+    
     if node is None:
         return None
 
-    # Dataverse files may have name=None at initialization
-    # If this is the case, the topic can not be created yet
-    #try:
-    #    if node.name is None:
-    #        return None
-    #except AttributeError:
-    #    pass
-
-    topic_id = node.discourse_topic_id
-    if topic_id:
-        return topic_id
-    return create_topic(node)
+    if node.discourse_topic_id is None:
+        create_topic(node)
+    return node.discourse_topic_id
 
 def get_topic(node):
     topic_id = node.discourse_topic_id
@@ -505,18 +471,16 @@ def delete_topic(node):
     result = requests.delete(url.url)
     if result.status_code != 200:
         raise DiscourseException('Discourse server responded to topic delete request ' + result.url + ' with '
-                                 + str(result.status_code) + ' ' + result.text)
-
+                                 + str(result.status_code) + ' ' + result.text[:500])
     node.discourse_topic_id = None
 
 def create_comment(node, comment_text, user=None, reply_to_post_number=None):
-    if user is None:
-        user_name = get_username()
+    if user is None or user == 'system':
+        user_name = 'system'
     else:
         user_name = get_username(user)
-
-    if user_name is None:
-        raise DiscourseException('The user given does not exist in discourse!')
+        if user_name is None:
+            raise DiscourseException('The user given does not exist in discourse!')
 
     url = furl(settings.DISCOURSE_SERVER_URL).join('/posts')
     url.args['api_key'] = settings.DISCOURSE_API_KEY
@@ -526,7 +490,6 @@ def create_comment(node, comment_text, user=None, reply_to_post_number=None):
     category_id = get_or_create_category_id(project_node)
 
     topic_id = get_or_create_topic_id(node)
-    url.args['category'] = category_id
     url.args['topic_id'] = topic_id
     url.args['raw'] = comment_text
     url.args['nested_post'] = 'true'
@@ -538,7 +501,7 @@ def create_comment(node, comment_text, user=None, reply_to_post_number=None):
         raise DiscourseException('Discourse server responded to comment create request ' + result.url + ' with '
                                  + str(result.status_code) + ' ' + result.text)
 
-    return result.json()['post']['id']
+    return result.json()
 
 def edit_comment(comment_id, comment_text):
     url = furl(settings.DISCOURSE_SERVER_URL).join('/posts/' + str(comment_id))

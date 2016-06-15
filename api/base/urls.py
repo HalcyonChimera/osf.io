@@ -30,6 +30,7 @@ urlpatterns = [
                 url(r'^wikis/', include('api.wikis.urls', namespace='wikis')),
                 url(r'^sso/', include('api.sso.urls', namespace='sso')),
                 url(r'^identifiers/', include('api.identifiers.urls', namespace='identifiers')),
+                url(r'^sso/', include('api.sso.urls', namespace='sso')),
             ],
         )
         ),
