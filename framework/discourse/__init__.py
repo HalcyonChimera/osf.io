@@ -393,22 +393,11 @@ def _escape_markdown(text):
 
 def create_topic(node):
     project_node = _get_project_node(node)
-    if project_node.topic_id:
-        return project_node.topic_id
+    if project_node.discourse_topic_id:
+        return project_node.discourse_topic_id
     #sync_project(project_node)
 
-    url = furl(settings.DISCOURSE_SERVER_URL).join('/posts')
-    url.args['api_key'] = settings.DISCOURSE_API_KEY
-    url.args['api_username'] = settings.DISCOURSE_API_ADMIN_USER
-
-    # we can't do a more elegant isinstance check because that
-    # causes import errors with circular referencing.
-    
-    #import ipdb; ipdb.set_trace()
-
-    #if 'page_name' in node:
-        
-
+    url = furl
     try:
         node_type = 'wiki'
         node_title = 'Wiki page: ' + node.page_name
@@ -423,37 +412,41 @@ def create_topic(node):
                 node_title = node.title
                 node_description = _escape_markdown(node.title)
 
-    #if isinstance(node, Node):
-    #    node_title = node.title
-    #elif isinstance(node, File):
-    #    node_title = 'the file ' + node.name
-    #elif isinstance(node, NodeWikiPage):
-    #    node_title = 'the wiki page ' + node.page_name
-
-    #category_id = get_or_create_category_id(project_node)
-    url.args['category'] = '1' #Category id '1' is 'Uncategorized'
-    url.args['title'] = node._id
-    url.args['tags[]'] = node._id
-    url.args['archetype'] = 'private_message'
-    url.args['target_usernames'] = ','.join(node.contributors)
-
     license = node.license
     if not license:
         license = u""
     
     #import ipdb; ipdb.set_trace()
-    url.args['raw'] = '`' + node_title 
-    url.args['raw'] += '`Contributors: ' + ', '.join(map(lambda c: c._id, node.contributors))
-    url.args['raw'] += '\nDate Created: ' + node.date_created.strftime("%Y-%m-%d %H:%M:%S")
-    url.args['raw'] += '\nCategory: ' + node.category
-    url.args['raw'] += '\nDescription: '+ node.description
-    url.args['raw'] += '\nLicense: ' + license
 
+    topic_content = '`' + node_title 
+    
     if node_type == 'file':
-        file_url = furl(settings.DOMAIN).join(node.get_persistant_guid()._id).url
-        url.args['raw'] += '\nFile url: ' + file_url + '/'
+        file_url += furl(settings.DOMAIN).join(node.get_persistant_guid()._id).url
+        url += '\nFile url: ' + file_url + '/'
+    
+    topic_content += '`Contributors: ' + ', '.join(map(lambda c: c.display_full_name(), node.contributors))
+    topic_content += '\nDate Created: ' + node.date_created.strftime("%Y-%m-%d %H:%M:%S")
+    topic_content += '\nCategory: ' + node.category
+    topic_content += '\nDescription: ' + node.description
+    topic_content += '\nLicense: ' + license
 
-    result = requests.post(url.url)
+    #import ipdb; ipdb.set_trace()
+
+    payload = {
+        'raw': topic_content,
+        'category': '',
+        'is_warning': 'false',
+        'title': node._id,
+        'tags[]': node._id,
+        'archetype': 'private_message',
+        'target_usernames': ','.join(map(lambda c: c._id, node.contributors)),
+        #'api_username': node.creator._id,
+        'api_username': settings.DISCOURSE_API_ADMIN_USER,
+        'api_key': settings.DISCOURSE_API_KEY
+    }
+
+    result = requests.post(settings.DISCOURSE_SERVER_URL + '/posts', data=payload)
+    
     if result.status_code != 200:
         raise DiscourseException('Discourse server responded to topic create request ' + result.url + ' with '
                                  + str(result.status_code) + ' ' + result.text)
