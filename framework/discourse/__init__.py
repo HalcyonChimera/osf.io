@@ -393,6 +393,8 @@ def _escape_markdown(text):
 
 def create_topic(node):
     project_node = _get_project_node(node)
+    if project_node.topic_id:
+        return project_node.topic_id
     #sync_project(project_node)
 
     url = furl(settings.DISCOURSE_SERVER_URL).join('/posts')
@@ -457,7 +459,8 @@ def create_topic(node):
     topic_id = result.json()['topic_id']
 
     node.discourse_topic_id = topic_id
-    node.discourse_tags.append(node._id)
+    #import ipdb; ipdb.set_trace()
+    node.discourse_tags
     node.save()
 
     #import ipdb; ipdb.set_trace()
