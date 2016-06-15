@@ -362,7 +362,7 @@ def delete_category(project_node):
 
 def sync_project(project_node):
     sync_group(project_node)
-    if project_node_id in project_node.tags:
+    if project_node._id in project_node.tags:
         project_node.tags.append(project_node._id)
     else:
         update_category(project_node, category_id)
