@@ -20,6 +20,8 @@ class NodeTopicProxy:
 
     server_url = settings.DISCOURSE_SERVER_URL
 
+    # This should be refactored for a default and when the 
+    # node does have a discussion attribute
     def __init__(self, node):
         self.context_node = node
         self.guid = node._id
@@ -35,16 +37,17 @@ class NodeTopicProxy:
             self.title = node.name
         self.description = re.compile(r'([\\`*_{}[\]()#.!-])').sub(r'\\\1', self.title)
         self.topic_privacy = 'private_message' # projects are private by default
-        #node_type = utils.get_node_type(node)
         self.is_deleted = node.is_deleted
-        self.post_id = node.post_id
-        # this should be an error if not?
         # If we want access to the discourse topic, we're wanting it to exist.
         # If we dont have a discussion attribute on the node, we can't access it,
         # so we'll need to create it.
         if not node.discussion:
+            self.url = furl(settings.DOMAIN).join(node.get_persistant_guid()._id).url
             self.post_id = None
             self.post()
+        else:
+            # This should be an error if not?
+            self.post_id = node.discussion.post_id
         return 
 
     # Let's raise an exception if we try and call methods on an instance
