@@ -18,31 +18,40 @@ class CommunicationError(Exception):
 
 class NodeTopicProxy:
 
+    server_url = settings.DISCOURSE_SERVER_URL
+
     def __init__(self, node):
         self.context_node = node
         self.guid = node._id
         self.category = node.category
-        if 'title' in node:
-            self.node_type = 'project'
+        if node.target_type == 'nodes':
+            self.node_type = node.project_or_component
             self.title = node.title
-        if 'page_name' in node:
+        if node.target_type == 'wikis':
             self.node_type = 'wiki'
             self.title = node.page_name
-        if 'name' in node:
+        if node.target_type == 'files':
             self.node_type = 'file'
             self.title = node.name
         self.description = re.compile(r'([\\`*_{}[\]()#.!-])').sub(r'\\\1', self.title)
         self.topic_privacy = 'private_message' # projects are private by default
         #node_type = utils.get_node_type(node)
+        self.is_deleted = node.is_deleted
+        # If we want access to the discourse topic, we're wanting it to exist.
+        # If we dont have a discussion attribute on the node, we can't access it,
+        # so we'll need to create it.
+        if not node.discussion:
+            self.post()
+
         return 
 
     # Let's raise an exception if we try and call methods on an instance
     # after it's deleted.
     def disable_after_deletion(func):
-        def wrapped(*args, **kwargs):
-            if self.deleted:
+        def wrapped(self, *args, **kwargs):
+            if self.is_deleted:
                 raise CommunicationError('This topic has been deleted.')
-            func()
+            func(self, *args, **kwargs)
         return wrapped
 
     @disable_after_deletion
@@ -65,17 +74,17 @@ class NodeTopicProxy:
                 'Category: '+self.category,
                 'Description: '+self.description,
                 'License: '+self.license
-                ])
+                ]),
             'category': '',
             'is_warning': 'false',
-            'title': node_guid,
-            'tags[]': discourse_tags,
+            'title': self.guid,
+            'tags[]': self.tags,
             'archetype': self.topic_privacy,
             'target_usernames': ','.join(map(lambda c: c._id, node.contributors)),
             'api_username': settings.DISCOURSE_API_ADMIN_USER,
             'api_key': settings.DISCOURSE_API_KEY
             })
-        if response.status_code = 200:
+        if response.status_code == 200:
             self.debrief_node()
             return response
         return response
@@ -84,7 +93,9 @@ class NodeTopicProxy:
     def delete(self):
         if not self.topic_id:
             raise AttributeError('Cannot delete a discourse topic without a discourse topic id.')
-        requests.delete(settings.DISCOURSE_SERVER_URL + '/t/' self.topic_id)
+        f = furl(settings.DISCOURSE_SERVER_URL).join('/t')
+        f.join(self.topic_id)
+        requests.delete(f.url)
         self.context_node.discourse = None
         self.deleted = true
         
