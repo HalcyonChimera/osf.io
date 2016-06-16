@@ -374,8 +374,9 @@ def view_project(auth, node, **kwargs):
     ))
     ret.update(rubeus.collect_addon_assets(node))
 
-    ret['discourse_url'] = settings.DISCOURSE_SERVER_URL
-    ret['discourse_topic_id'] = discourse.get_or_create_topic_id(node)
+    ntp = discourse.NodeTopicProxy(node)
+    ret['discourse_url'] = ntp.server_url
+    ret['discourse_topic_id'] = ntp.topic_id
 
     return ret
 

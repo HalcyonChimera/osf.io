@@ -847,6 +847,8 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin, Commentable):
     registered_date = fields.DateTimeField(index=True)
     registered_user = fields.ForeignField('user')
 
+    
+
     # A list of all MetaSchemas for which this Node has registered_meta
     registered_schema = fields.ForeignField('metaschema', list=True, default=list)
     # A set of <metaschema._id>: <schema> pairs, where <schema> is a
@@ -914,6 +916,8 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin, Commentable):
     discourse_group_id = fields.StringField(default=None)
     discourse_topic_id = fields.StringField(default=None)
     discourse_tags = fields.StringField(list=True)
+
+    discussion = fields.DictionaryField()
 
     _meta = {
         'optimistic': True,
