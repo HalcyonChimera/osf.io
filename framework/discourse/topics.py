@@ -38,15 +38,19 @@ class NodeTopicProxy:
         self.description = re.compile(r'([\\`*_{}[\]()#.!-])').sub(r'\\\1', self.title)
         self.topic_privacy = 'private_message' # projects are private by default
         self.is_deleted = node.is_deleted
+        self.contributors = node.contributors
+        self.date_created = node.date_created
+        self.license = node.license if node.license != None else u''
+        self.tags = [self.guid]
         # If we want access to the discourse topic, we're wanting it to exist.
         # If we dont have a discussion attribute on the node, we can't access it,
         # so we'll need to create it.
         if not node.discussion:
-            self.url = furl(settings.DOMAIN).join(node.get_persistant_guid()._id).url
-            self.post_id = None
-            self.post()
+            self.url = furl(settings.DOMAIN).join(self.guid).url
+            self.resolve()
         else:
             # This should be an error if not?
+            self.topic_id = node.discussion.topic_id
             self.post_id = node.discussion.post_id
         return 
 
@@ -68,11 +72,11 @@ class NodeTopicProxy:
             }
 
     @disable_after_deletion
-    def post(self, tries=3):
+    def resolve(self, tries=3):
         f = furl(settings.DISCOURSE_SERVER_URL).join('/posts')
-        if self.post_id != None:
+        if hasattr(self, 'post_id') and self.post_id != None:
             f.join(self.post_id)
-        response = requests.post(f.url, json={
+        response = requests.post(f.url, data={
             'raw': "\n".join([
                 '`'+self.title+'``'+self.url+'`',
                 'Contributors: '+', '.join(map(lambda c: c.display_full_name(), self.contributors)),
@@ -86,13 +90,16 @@ class NodeTopicProxy:
             'title': self.guid,
             'tags[]': self.tags,
             'archetype': self.topic_privacy,
-            'target_usernames': ','.join(map(lambda c: c._id, node.contributors)),
+            'target_usernames': ','.join(map(lambda c: c._id, self.contributors)),
             'api_username': settings.DISCOURSE_API_ADMIN_USER,
             'api_key': settings.DISCOURSE_API_KEY
             })
         if response.status_code == 200:
+            self.topic_id = response.content.topic_id
+            self.post_id = response.content.id
             self.debrief_node()
             return response
+        raise CommunicationError('not 200, it was {}'.format(response.status_code))
         return response
 
     @disable_after_deletion
