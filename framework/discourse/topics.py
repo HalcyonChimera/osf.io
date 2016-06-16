@@ -37,12 +37,14 @@ class NodeTopicProxy:
         self.topic_privacy = 'private_message' # projects are private by default
         #node_type = utils.get_node_type(node)
         self.is_deleted = node.is_deleted
+        self.post_id = node.post_id
+        # this should be an error if not?
         # If we want access to the discourse topic, we're wanting it to exist.
         # If we dont have a discussion attribute on the node, we can't access it,
         # so we'll need to create it.
         if not node.discussion:
+            self.post_id = None
             self.post()
-
         return 
 
     # Let's raise an exception if we try and call methods on an instance
@@ -65,7 +67,8 @@ class NodeTopicProxy:
     @disable_after_deletion
     def post(self, tries=3):
         f = furl(settings.DISCOURSE_SERVER_URL).join('/posts')
-        if self.post_id: f.join(self.post_id)
+        if self.post_id != None:
+            f.join(self.post_id)
         response = requests.post(f.url, json={
             'raw': "\n".join([
                 '`'+self.title+'``'+self.url+'`',
