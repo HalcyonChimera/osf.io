@@ -22,7 +22,7 @@ class NodeTopicProxy:
 
     # This should be refactored for a default and when the 
     # node does have a discussion attribute
-    def __init__(self, node):
+    def __init__(self, node=default_node):
         self.context_node = node
         self.guid = node._id
         self.category = node.category
