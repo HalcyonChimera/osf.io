@@ -374,7 +374,6 @@ def view_project(auth, node, **kwargs):
     ))
     ret.update(rubeus.collect_addon_assets(node))
 
-    ret['discourse_url'] = settings.DISCOURSE_SERVER_URL
     ret['discourse_topic_id'] = discourse.get_or_create_topic_id(node)
 
     return ret
@@ -779,7 +778,8 @@ def _view_project(node, auth, primary=False):
         'addon_widgets': widgets,
         'addon_widget_js': js,
         'addon_widget_css': css,
-        'node_categories': settings.NODE_CATEGORY_MAP
+        'node_categories': settings.NODE_CATEGORY_MAP,
+        'discourse_url': settings.DISCOURSE_SERVER_URL,
     }
     return data
 
