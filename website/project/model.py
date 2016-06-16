@@ -1522,7 +1522,7 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin, Commentable):
                 },
                 auth=auth)
         #celery queue
-        discourse.create_comment(self, "{} updated {} {}".format(auth.user, self.project_or_component, values), 'system')
+        #discourse.create_comment(self, "{} updated {} {}".format(auth.user, self.project_or_component, values), 'system')
         return updated
 
     def save(self, *args, **kwargs):
@@ -1606,7 +1606,7 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin, Commentable):
             piwik_tasks.update_node(self._id, saved_fields)
 
         # For project public/private and contributors
-        discourse.sync_project(self)
+        #discourse.sync_project(self)
 
         # Return expected value for StoredObject::save
         return saved_fields

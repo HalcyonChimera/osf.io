@@ -69,8 +69,8 @@ def get_username(user=None):
         else:
             return None
 
-    if not user.discourse_user_created:
-        create_user(user)
+    #if not user.discourse_user_created:
+    #    create_user(user)
     return user._id
 
 def logout():
@@ -177,7 +177,7 @@ def create_group(project_node):
     url.args['name'] = project_node._id
     url.args['visible'] = 'true' if project_node.is_public else 'false'
     url.args['alias_level'] = '3' # allows to message this group directly
-
+    import ipdb; ipdb.set_trace()
     result = requests.post(url.url)
     if result.status_code != 200:
         raise DiscourseException('Discourse server responded to group creation request '
@@ -321,7 +321,7 @@ def _escape_markdown(text):
 
     
 def create_topic(node):
-    import ipdb; ipdb.set_trace() 
+    #import ipdb; ipdb.set_trace() 
     try:
         node_type = 'wiki'
         node_guid = node._id
@@ -345,7 +345,7 @@ def create_topic(node):
     #parent_node = project_node
     
 
-    discourse_tags = [node_id]
+    discourse_tags = [node._id]
 
     #if parent_node is node:
     #    parent_node = t

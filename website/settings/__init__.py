@@ -9,6 +9,7 @@
 import yaml
 
 
+from .defaults import *  # noqa
 try:
     from .local import *  # noqa
 except ImportError as error:
@@ -18,7 +19,6 @@ except ImportError as error:
 
 discourse_settings = yaml.load(open('./website/settings/discourse_settings.yml', 'r'))
 
-from .defaults import *  # noqa
 if not DEV_MODE:
     from . import local
     from . import defaults
