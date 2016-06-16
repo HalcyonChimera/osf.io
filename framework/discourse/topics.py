@@ -22,7 +22,7 @@ class NodeTopicProxy:
 
     # This should be refactored for a default and when the 
     # node does have a discussion attribute
-    def __init__(self, node=default_node):
+    def __init__(self, node):
         self.context_node = node
         self.guid = node._id
         self.category = node.category
@@ -64,14 +64,6 @@ class NodeTopicProxy:
         return wrapped
 
     @disable_after_deletion
-    def debrief_node(self):
-        self.node.discussion = {
-            'topic_id': self.topic_id,
-            'group_id': self.group_id,
-            'post_id': self.post_id
-            }
-
-    @disable_after_deletion
     def resolve(self, tries=3):
         f = furl(settings.DISCOURSE_SERVER_URL).join('/posts')
         if hasattr(self, 'post_id') and self.post_id != None:
@@ -95,12 +87,12 @@ class NodeTopicProxy:
             'api_key': settings.DISCOURSE_API_KEY
             })
         if response.status_code == 200:
-            self.topic_id = response.content.topic_id
-            self.post_id = response.content.id
+            r = response.json()
+            self.topic_id = r[u'topic_id']
+            self.post_id = r[u'id']
             self.debrief_node()
             return response
         raise CommunicationError('not 200, it was {}'.format(response.status_code))
-        return response
 
     @disable_after_deletion
     def delete(self):
@@ -111,5 +103,13 @@ class NodeTopicProxy:
         requests.delete(f.url)
         self.context_node.discourse = None
         self.deleted = true
-        
+
+    @disable_after_deletion
+    def debrief_node(self):
+        self.node.discussion = {
+            'topic_id': self.topic_id,
+            'group_id': self.group_id,
+            'post_id': self.post_id
+            }
+
 ###############################################################################
