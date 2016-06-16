@@ -76,7 +76,7 @@ class NodeTopicProxy:
             'api_key': settings.DISCOURSE_API_KEY
             })
         if response.status_code = 200:
-            self.update_node()
+            self.debrief_node()
             return response
         return response
 
