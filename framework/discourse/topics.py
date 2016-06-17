@@ -3,6 +3,8 @@ from furl import furl
 import requests
 
 from website import settings
+from . import groups
+from . import errors
 from . import utils
 import time
 
@@ -13,19 +15,33 @@ api_key = settings.DISCOURSE_API_KEY
 
 ###############################################################################
 
-class CommunicationError(Exception):
-    pass
-
 class NodeTopicProxy:
+
+    class Description(object):
+        def __init__(self, ctx):
+            self.ctx = ctx
+            self.overridden = False
+        def __set__(self, value):
+            self.overriden = True
+            self.value = value
+        def __get__(self):
+            return self.value if self.overridden else compose_description(self)
+        def compose_description(self):
+            return "\n".join([
+                '`'+self.cxt.title+'``'+self.url+'`',
+                'Contributors: '+', '.join(map(lambda c: c.display_full_name(), self.ctx.contributors)),
+                'Date Created: ' + self.ctx.date_created.strftime('%Y-%m-%d %H:%M:%S'),
+                'Category: '+self.ctx.category,
+                'Description: '+self.ctx.description,
+                'License: '+self.ctx.license
+                ])
 
     server_url = settings.DISCOURSE_SERVER_URL
 
     # This should be refactored for a default and when the 
     # node does have a discussion attribute
     def __init__(self, node):
-        self.context_node = node
-        self.guid = node._id
-        self.category = node.category
+        self.node = node
         if node.target_type == 'nodes':
             self.node_type = node.project_or_component
             self.title = node.title
@@ -35,13 +51,16 @@ class NodeTopicProxy:
         if node.target_type == 'files':
             self.node_type = 'file'
             self.title = node.name
-        self.description = re.compile(r'([\\`*_{}[\]()#.!-])').sub(r'\\\1', self.title)
+        self.guid = node._id
+        self.description = Description(self)
+        self.category = node.category
+        self.date_created = node.date_created
+        self.contributors = node.contributors
         self.topic_privacy = 'private_message' # projects are private by default
         self.is_deleted = node.is_deleted
-        self.contributors = node.contributors
-        self.date_created = node.date_created
         self.license = node.license if node.license != None else u''
         self.tags = [self.guid]
+        self.group_proxy = NodeGroupProxy(self.context_node)
         # If we want access to the discourse topic, we're wanting it to exist.
         # If we dont have a discussion attribute on the node, we can't access it,
         # so we'll need to create it.
@@ -66,17 +85,10 @@ class NodeTopicProxy:
     @disable_after_deletion
     def resolve(self, tries=3):
         f = furl(settings.DISCOURSE_SERVER_URL).join('/posts')
-        if hasattr(self, 'post_id') and self.post_id != None:
+        if self.get('post_id') != None:
             f.join(self.post_id)
         response = requests.post(f.url, data={
-            'raw': "\n".join([
-                '`'+self.title+'``'+self.url+'`',
-                'Contributors: '+', '.join(map(lambda c: c.display_full_name(), self.contributors)),
-                'Date Created: ' + self.date_created.strftime('%Y-%m-%d %H:%M:%S'),
-                'Category: '+self.category,
-                'Description: '+self.description,
-                'License: '+self.license
-                ]),
+            'raw': 
             'category': '',
             'is_warning': 'false',
             'title': self.guid,
@@ -92,7 +104,7 @@ class NodeTopicProxy:
             self.post_id = r[u'id']
             self.debrief_node()
             return response
-        raise CommunicationError('not 200, it was {}'.format(response.status_code))
+        raise RequestError('not 200, it was {}'.format(response.status_code))
 
     @disable_after_deletion
     def delete(self):
@@ -111,5 +123,6 @@ class NodeTopicProxy:
             'group_id': self.group_id,
             'post_id': self.post_id
             }
+        self.node.save()
 
 ###############################################################################
