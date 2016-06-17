@@ -2,7 +2,7 @@
 class NodeGroupProxy:
 
     def __init__(self, node):
-        self.project_node_id = 
+        self.permission_node = node.
 
     def resolve(self):
         response = requests.post(f.url, data={
@@ -12,12 +12,17 @@ class NodeGroupProxy:
             'visible': 'true' if parent.is_public else 'false'
             'alias_level': '3'
             })
-        if response.status_code != 200:
-            raise HttpException('Expected reponse code 200, got {}'.format(response.status_code))
-            return response
-
-        return response
-
-    def debrief_node():
+        if response.status_code == 200:
+            r = response.json()
+            self.group_id = 
+        raise RequestError('Expected reponse code 200, got {}'.format(response.status_code))
+    
+    def delete(self):
         pass
+
+
+    def debrief(self):
+        if self.get('permissions_node') != None:
+            pass
+        if self.get()
 
