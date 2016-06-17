@@ -941,8 +941,14 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin, Commentable):
         return 'nodes'
 
     # For Discourse API compatibility
-    def get_guid_id(self):
+    @property
+    def guid_id(self):
         return self._id
+
+    # For Discourse API compatibility
+    @property
+    def label(self):
+        return self.title
 
     @property
     def root_target_page(self):
