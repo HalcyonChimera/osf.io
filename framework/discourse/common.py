@@ -1,5 +1,6 @@
 from website import settings
 import requests
+from simplejson.scanner import JSONDecodeError
 
 class DiscourseException(Exception):
     pass
@@ -27,4 +28,7 @@ def request(method, path, data={}, user_name=None):
         raise DiscourseException('Discourse server responded to ' + method + ' request ' + result.url + ' with '
                                  + str(result.status_code) + ': ' + result.text[:500])
 
-    return result.json() if result.text else None
+    try:
+        return result.json()
+    except JSONDecodeError:
+        return None
