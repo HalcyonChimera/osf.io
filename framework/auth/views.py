@@ -129,9 +129,6 @@ def auth_login(auth, **kwargs):
     login form passsed; else send forgot password email.
 
     """
-
-    import ipdb; ipdb.set_trace()
-
     campaign = request.args.get('campaign')
     next_url = request.args.get('next')
     must_login_warning = True
