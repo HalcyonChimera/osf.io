@@ -32,7 +32,6 @@ class SSOView(JSONAPIBaseView):
         sso_secret = settings.DISCOURSE_SSO_SECRET
 
         if not auth.logged_in:
-            #sso_url = furl(settings.DISCOURSE_SERVER_URL).join('/session/sso')
             return HttpResponseRedirect(cas.get_login_url(settings.DOMAIN, auto=True))
 
         encoded_payload = request.GET.get('sso', '')
