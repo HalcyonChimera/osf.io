@@ -255,6 +255,7 @@ class NodeSerializer(JSONAPISerializer):
         else:
             node = Node(**validated_data)
         try:
+            #import ipdb; ipdb.set_trace()
             node.save()
         except ValidationValueError as e:
             raise InvalidModelValueError(detail=e.message)

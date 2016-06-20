@@ -11,6 +11,8 @@ import time
 import ipdb
 
 from website import settings
+from framework.discourse.topics import NodeTopicProxy
+from framework.discourse.groups import NodeGroupProxy
 
 class DiscourseException(Exception):
     pass
@@ -414,6 +416,7 @@ def create_topic(node):
 
     return result_json
 
+#merged with create_topic
 def update_topic_content(node):
     url = furl(settings.DISCOURSE_SERVER_URL).join('/posts/' + str(node.discourse_post_id))
     url.args['api_key'] = settings.DISCOURSE_API_KEY
