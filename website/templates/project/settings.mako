@@ -374,15 +374,43 @@
                     </div>
                     
                     <div class="panel-body">
-                    
+                   
+
+                        <!--
+                        <style>
+                            #mailing_list_settings {
+                                width: 100%;
+                                border: 1px solid red;
+
+                            }
+                        </style>
+                        <form id="mailing_list_settings">
+
+                            <ul id='mailing_list_subscribers'>
+                            </ul>
+                            
+                            <script>
+                            
+                                var ml_subs = document.querySelector('#mailing_list_subscribers');  
+                                var xhr = new XMLHttpRequest();
+                                xhr.open('GET', 'http://api.mechanysm.com/v2/mailing_lists/project_guid/subscribers');
+                                xhr.onreadystatechange = function(e) {
+                                    if (xhr.status !==200) {
+                                    console.log('ok');
+                                    }
+                                }
+
+                            </script>
+
+                        </form>
+
+                        -->
                         % if PROJECT_MAILING_ENABLED:
-                            % if node['mailing_list_enabled'] or user['is_admin']:  ## Begin Project Mailing Lists Settings
-                                <br/>
-                                <div style="padding-left: 15px">
-                                    <a data-toggle="modal" data-target="#mailingListContributorsModal"><i class="fa fa-envelope"></i></a>
-                                    Project Mailing List Info
-                                </div>
-                            % endif
+                            <br/>
+                            <div style="padding-left: 15px">
+                                <a data-toggle="modal" data-target="#mailingListContributorsModal"><i class="fa fa-envelope"></i></a>
+                                Project Mailing List Info
+                            </div>
                             % if user['is_admin']:
                                 <div class="help-block" style="padding-left: 15px">
                                     <p class="text-muted">This notification setting applies to ALL project contributors.</p>
@@ -400,6 +428,7 @@
                                 </form>
                             % endif
                         % endif  ## End PML Settings ## Begin Individual Email Notifications
+                        
                         <div class="help-block" style="padding-left: 15px">
                             <p class="text-muted">These notification settings only apply to you. They do NOT affect any other contributor on this project.</p>
                         </div>

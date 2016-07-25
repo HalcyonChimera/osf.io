@@ -62,11 +62,9 @@
                   <i class="fa fa-plus"></i> Add
                 </a>
             <!-- /ko -->
-            % if node['mailing_list_enabled'] and PROJECT_MAILING_ENABLED:
-                <span class="m-l-md pull-right" style="font-size: 65%">Mailing List Info: 
-                <a data-toggle="modal" data-target="#mailingListContributorsModal"><i class="fa fa-envelope"></i></a>
-                </span>
-            % endif
+            <span class="m-l-md pull-right" style="font-size: 65%">Mailing List Info: 
+            <a data-toggle="modal" data-target="#mailingListContributorsModal"><i class="fa fa-envelope"></i></a>
+            </span>
         </h3>
 
         % if 'admin' in user['permissions'] and not node['is_registration']:
@@ -242,18 +240,16 @@
                 data-bind="css: {sortable: ($data === 'contrib' && $root.isSortable())}">Name
             </th>
             <th></th>
-            % if node['mailing_list_enabled'] and PROJECT_MAILING_ENABLED:
-                <th class="col-md-3" style="text-align: center">
-                    In Mailing List
-                    <i class="fa fa-question-circle mailing-list-info"
-                        data-toggle="popover"
-                        data-title="Mailing List Information"
-                        data-container="body"
-                        data-placement="right"
-                        data-html="true"
-                    ></i>
-                </th>
-            % endif
+            <th class="col-md-3" style="text-align: center">
+                In Mailing List
+                <i class="fa fa-question-circle mailing-list-info"
+                    data-toggle="popover"
+                    data-title="Mailing List Information"
+                    data-container="body"
+                    data-placement="right"
+                    data-html="true"
+                ></i>
+            </th>
             <th>
                 Permissions
                 <i class="fa fa-question-circle permission-info"
@@ -326,12 +322,10 @@
                 <a class="name-search" data-bind="text: contributor.shortname, attr:{href: profileUrl}"></a>
             </span>
         </td>
-        % if node['mailing_list_enabled'] and PROJECT_MAILING_ENABLED:
-            <td class="text-center">
-                <i class="fa fa-check" data-bind="visible: subscribed"></i>
-                <i class="fa fa-close" data-bind="visible: !subscribed"></i>
-            </td>
-        % endif
+        <td class="text-center">
+            <i class="fa fa-check" data-bind="visible: subscribed"></i>
+            <i class="fa fa-close" data-bind="visible: !subscribed"></i>
+        </td>
         <td class="permissions">
             <div class="header" data-bind="visible: contributor.expanded() && $root.collapsed()"></div>
             <div class="td-content" data-bind="visible: !$root.collapsed() || contributor.expanded()">

@@ -11,11 +11,13 @@
                 <div class="modal-body">
                     <h4 class="row text-center">
                     <div class="btn-group">
-                        <a href="mailto: ${node['mailing_list_address']}">${node['mailing_list_address']}</a>
+                        <a href="mailto:${node['id']}@lists.mechanysm.com">${node['id']}@lists.mechanysm.com</a>
                     </div>
                     </h4>
                     
-                    % if len(node['mailing_list_unsubs']):
+                    <!-- % if len(node['mailing_list_unsubs']): -->
+                    
+                    % if false:
                         <p>${len(node['contributors']) - len(node['mailing_list_unsubs'])} out of ${len(node['contributors'])} contributors will receive any email sent to this address.</p>
                         <p>A contributor who is not subscribed to this mailing list will not receive any emails sent to it. To
                         % if user['is_admin']:

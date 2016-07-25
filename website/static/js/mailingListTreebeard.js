@@ -26,6 +26,7 @@ function subscribe(item, notificationType, reload, url) {
 
 function ProjectMailingList(data, reload, url) {
 
+    console.log('here')
     //  Treebeard version
     var tbOptions = $.extend({}, projectSettingsTreebeardBase.defaults, {
         divID: 'mailingListGrid',

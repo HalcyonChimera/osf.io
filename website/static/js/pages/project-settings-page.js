@@ -12,7 +12,7 @@ var $osf = require('js/osfHelpers');
 require('css/addonsettings.css');
 
 var ctx = window.contextVars;
-
+console.log(ctx)
 var ProjectNotifications = require('js/notificationsTreebeard.js');
 var $notificationsMsg = $('#configureNotificationsMessage');
 var notificationsURL = ctx.node.urls.api  + 'subscriptions/';
@@ -20,6 +20,7 @@ var notificationsURL = ctx.node.urls.api  + 'subscriptions/';
 function initNotificationsTB() {
     // Initialize treebeard grid for notifications
     // Need check because notifications settings don't exist on registration's settings page
+    
     if ($('#grid').length) {
         $.ajax({
             url: notificationsURL,
@@ -43,7 +44,9 @@ var ProjectMailingList = require('../mailingListTreebeard.js');
 var mailingListSettingsURL = ctx.node.urls.api + 'mailing_list/';  // TODO [OSF-6400]: Update to V2
 var $mailingListMsg = $('#configureMailingListMessage');
 
+console.log('here')
 if ($('#mailingListGrid').length) {
+    console.log('here')
     $.ajax({
         url: mailingListSettingsURL,
         type: 'GET',

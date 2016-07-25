@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
 """Create mailing lists for all top-level projects
 """
+
+
+
 import logging
 import sys
 
+sys.path.append('/var/osf')
 from modularodm import Q
 
 from framework.mongo import database
@@ -52,80 +56,78 @@ def migrate(dry_run=True):
             continue
 
         with TokuTransaction():
-            if not node.is_mutable_project:
-                try:
-                    node_kind = 'immutable project'
-                    if node.is_registration:
-                        node_kind = 'registration'
-                    elif node.is_collection:
-                        node_kind = 'collection' 
-                    elif node.is_deleted:
-                        node_kind = 'deleted project' 
-                    logger.info('({done}/{total}) Disabling mailing list for {kind} {_id}'.format(done=i, total=ncount, _id=node._id, kind=node_kind)
-                    )
-                    if not dry_run:
-                        database['node'].find_and_modify(
-                            {'_id': node._id},
-                            {'$set': {'mailing_enabled': False,
-                                      'mailing_updated': False}
-                            }
-                        )
-                    successful_disables.append(node._id)
-                except Exception as e:
-                    logger.exception('Error while handling node {}'.format(node._id))
-                    unknown_failures[node._id] = e
+            #try:
+            #    node_kind = 'immutable project'
+            #    if node.is_registration:
+            #        node_kind = 'registration'
+            #    elif node.is_collection:
+            #        node_kind = 'collection' 
+            #    elif node.is_deleted:
+            #        node_kind = 'deleted project' 
+            #    logger.info('({done}/{total}) Disabling mailing list for {kind} {_id}'.format(done=i, total=ncount, _id=node._id, kind=node_kind)
+            #    )
+            #    if not dry_run:
+            #        database['node'].find_and_modify(
+            #            {'_id': node._id},
+            #            {'$set': {'mailing_enabled': False,
+            #                      'mailing_updated': False}
+            #            }
+            #        )
+            #    successful_disables.append(node._id)
+            #except Exception as e:
+            #    logger.exception('Error while handling node {}'.format(node._id))
+            #    unknown_failures[node._id] = e
+            subscription = NotificationSubscription.load(to_subscription_key(node._id, EVENT))
+
+            if subscription:
+                if set(subscription.email_transactional) == set([c for c in node.contributors if c.is_active]):
+                    logger.info('({0}/{1}) Mailing list for new node {2} already enabled'.format(i, ncount, node._id))
+                    successful_noops.append(node._id)
+                    continue
             else:
-                subscription = NotificationSubscription.load(to_subscription_key(node._id, EVENT))
-                if subscription:
-                    assert node.mailing_enabled
-                    if set(subscription.email_transactional) == set([c for c in node.contributors if c.is_active]):
-                        logger.info('({0}/{1}) Mailing list for new node {2} already enabled'.format(i, ncount, node._id))
-                        successful_noops.append(node._id)
-                        continue
-                else:
-                    subscription = NotificationSubscription(
-                        _id=to_subscription_key(node._id, EVENT),
-                        owner=node,
-                        event_name=EVENT
+                subscription = NotificationSubscription(
+                    _id=to_subscription_key(node._id, EVENT),
+                    owner=node,
+                    event_name=EVENT
+                )
+            try:
+                logger.info('({0}/{1}) Enabling mailing list for node {2}'.format(i, ncount, node._id))
+
+                for user in node.contributors:
+                    if user.is_active:
+                        logger.info('Subscribing user {} on node {}'.format(user, node))
+                        subscription.add_user_to_subscription(user, SUBSCRIPTION_TYPE, save=bool(not dry_run))
+                        # users added on `create_list`
+
+                if not dry_run:
+                    subscription.save()
+                    database['node'].find_and_modify(
+                        {'_id': node._id},
+                        {'$set': {'mailing_enabled': True}}
                     )
+                successful_enables.append(node._id)
+            except Exception as e:
+                logger.exception('Error while handling node {}'.format(node._id))
+                unknown_failures[node._id] = e
+            else:
                 try:
-                    logger.info('({0}/{1}) Enabling mailing list for node {2}'.format(i, ncount, node._id))
-
-                    for user in node.contributors:
-                        if user.is_active:
-                            logger.info('Subscribing user {} on node {}'.format(user, node))
-                            subscription.add_user_to_subscription(user, SUBSCRIPTION_TYPE, save=bool(not dry_run))
-                            # users added on `create_list`
-
+                    print('CREATE THE LIST HERE')
+                except Exception as e:
+                    logger.exception('Mailgun: error while creating list for node {}'.format(node._id))
+                    # Sync this node later
+                    mailgun_failures.append(node.id)
                     if not dry_run:
-                        subscription.save()
                         database['node'].find_and_modify(
                             {'_id': node._id},
-                            {'$set': {'mailing_enabled': True}}
+                            {'$set': {'mailing_updated': True}}
                         )
-                    successful_enables.append(node._id)
-                except Exception as e:
-                    logger.exception('Error while handling node {}'.format(node._id))
-                    unknown_failures[node._id] = e
                 else:
-                    try:
-                        create_list(node._id)
-                    except Exception as e:
-                        logger.exception('Mailgun: error while creating list for node {}'.format(node._id))
-                        # Sync this node later
-                        mailgun_failures.append(node.id)
-                        if not dry_run:
-                            database['node'].find_and_modify(
-                                {'_id': node._id},
-                                {'$set': {'mailing_updated': True}}
-                            )
-                    else:
-                        # Node synced
-                        if not dry_run:
-                            database['node'].find_and_modify(
-                                {'_id': node._id},
-                                {'$set': {'mailing_updated': False}}
-                            )
+                    # Node synced
+                    if not dry_run:
+                        database['node'].find_and_modify(
+                            {'_id': node._id},
+                            {'$set': {'mailing_updated': False}}
+                        )
 
         if i % 100 == 0:
             for key in ('node', 'user', 'fileversion', 'storedfilenode'):

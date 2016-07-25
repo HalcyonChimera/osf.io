@@ -20,6 +20,7 @@ class NotificationSubscription(StoredObject):
 
     # Notification types
     none = fields.ForeignField('user', list=True)
+    mailing_list_subscribed = fields.ForeignField('user', list=True)
     email_digest = fields.ForeignField('user', list=True)
     email_transactional = fields.ForeignField('user', list=True)
 

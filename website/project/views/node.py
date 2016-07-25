@@ -375,7 +375,7 @@ def view_project(auth, node, **kwargs):
     ))
     ret.update(rubeus.collect_addon_assets(node))
 
-    ret['discourse_topic_id'] = discourse.get_or_create_topic_id(node)
+    #ret['discourse_topic_id'] = discourse.get_or_create_topic_id(node)
 
     return ret
 
@@ -739,9 +739,6 @@ def _view_project(node, auth, primary=False):
             'institutions': get_affiliated_institutions(node) if node else [],
             'alternative_citations': [citation.to_json() for citation in node.alternative_citations],
             'has_draft_registrations': node.has_active_draft_registrations,
-            'mailing_list_enabled': node.mailing_enabled,
-            'mailing_list_unsubs': [u.fullname for u in get_unsubscribes(node)] if node.is_contributor(user) and settings.PROJECT_MAILING_ENABLED else [],
-            'mailing_list_address': address(node._id),
             'contributors': [contributor._id for contributor in node.contributors]
         },
         'parent_node': {
@@ -785,6 +782,9 @@ def _view_project(node, auth, primary=False):
         'node_categories': settings.NODE_CATEGORY_MAP,
         'discourse_url': settings.DISCOURSE_SERVER_URL,
     }
+    #'mailing_list_enabled': node.mailing_enabled,
+    #'mailing_list_unsubs': [u.fullname for u in get_unsubscribes(node)] if node.is_contributor(user) and settings.PROJECT_MAILING_ENABLED else [],
+    #'mailing_list_address': address(node._id),
     return data
 
 def get_affiliated_institutions(obj):

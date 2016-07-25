@@ -533,6 +533,12 @@ else:
     #     },
     # })
 
+MAILMAN_API_DOMAIN = 'mailman.local'
+MAILMAN_API_PORT = '8001'
+MAILMAN_API_VERSION = '3.0'
+MAILMAN_API_USERNAME = 'apollo'
+MAILMAN_API_PASSWORD = 'FPbM!!yfU!GaQpPSkYl3'
+OSF_MAILING_LIST_DOMAIN = 'lists.mechanysm.com'
 
 WATERBUTLER_JWE_SALT = 'yusaltydough'
 WATERBUTLER_JWE_SECRET = 'CirclesAre4Squares'

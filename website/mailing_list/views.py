@@ -85,7 +85,7 @@ def format_node_data_recursive(nodes, user):
                 'id': node._id,
                 'url': node.url if can_read else '',
                 'title': node.title if can_read else 'Private Project',
-                'mailing_list': ('enabled' if node.mailing_enabled else 'disabled') if can_read else None
+                'mailing_list': 'enabled' if can_read else None
             },
             'children': children,
             'kind': 'folder' if not node.node__parent or not node.parent_node.has_permission(user, 'read') else 'node',
