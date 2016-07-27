@@ -52,6 +52,8 @@ class MailingListError():
 
 def with_list_proxy(fn):
     def _fn(*args, **kwargs):
+        print(args)
+        print(kwargs)
         @app.task
         def get_proxy(*args, **kwargs):
             try:
@@ -68,7 +70,6 @@ def with_list_proxy(fn):
 # If we call this, we need a mailing list. If it doesn't exist yet, we should 
 # create it. If it does exist, we should ensure it is up to date.
 # This calls out to another server, so we should not be block.
-@app.task
 @with_list_proxy 
 def upsert_list(list_title=None, list_description=None, list_proxy=None, list_mailbox=None, contributors=None, public=False):
     #try:
@@ -79,7 +80,7 @@ def upsert_list(list_title=None, list_description=None, list_proxy=None, list_ma
     stt[u'display_name'] = list_title
     stt[u'description'] = list_description
     stt[u'archive_policy'] = 'public' if public else 'private'
-    #import ipdb; ipdb.set_trace()
+    #from celery.contrib import rdb; rdb.set_trace()
     stt.save()
     contributors and add_contributors(list_proxy=list_proxy, contributors=contributors)
 
@@ -108,7 +109,7 @@ def add_contributor(list_mailbox=None, list_proxy=None, contributor=None):
         ), to_sub)
 
 def add_contributors(list_proxy=None, contributors=None):
-    map(lambda contributor: add_contributor(list_proxy, contributor), contributors)
+    map(lambda contributor: add_contributor(list_proxy=list_proxy, contributor=contributor), contributors)
 
 @contributor_added.connect
 def contributor_added_handler(node, contributor, auth=None, throttle=None):

@@ -1598,7 +1598,7 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin, Commentable):
         discourse.sync_project(self)
 
 
-        mailing_list.utils.upsert_list.apply_async(
+        mailing_list.utils.upsert_list(
             list_mailbox=self._id, 
             list_title=self.title,
             list_description=self.description,

@@ -42,6 +42,9 @@ def send_email(from_addr, to_addr, subject, message, mimetype='html', ttls=True,
             categories=categories
         )
     else:
+        
+        print(password)
+        print(username)
         return _send_with_smtp(
             from_addr=from_addr,
             to_addr=to_addr,
