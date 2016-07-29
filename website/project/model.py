@@ -1578,8 +1578,7 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin, Commentable):
         #if True in list(filter(lambda field: , saved_fields))
 
 
-        print(saved_fields & {'title', 'desctription', 'contributors', 'is_public'})
-        if saved_fields & {'title', 'desctription', 'contributors', 'is_public'}:
+        if set(saved_fields) & {'title', 'desctription', 'contributors', 'is_public'}:
             mailing_list_data_is_stale = True
 
         if mailing_list_data_is_stale:

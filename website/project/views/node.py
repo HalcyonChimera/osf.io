@@ -40,7 +40,7 @@ from website import settings
 from website.views import _render_nodes, find_bookmark_collection, validate_page_num
 from website.profile import utils
 from website.project.licenses import serialize_node_license_record
-from website.mailing_list.utils import get_unsubscribes, address
+from website.mailing_list.utils import get_unsubscribes
 from website.util.sanitize import strip_html
 from website.util import rapply
 
@@ -782,9 +782,6 @@ def _view_project(node, auth, primary=False):
         'node_categories': settings.NODE_CATEGORY_MAP,
         'discourse_url': settings.DISCOURSE_SERVER_URL,
     }
-    #'mailing_list_enabled': node.mailing_enabled,
-    #'mailing_list_unsubs': [u.fullname for u in get_unsubscribes(node)] if node.is_contributor(user) and settings.PROJECT_MAILING_ENABLED else [],
-    #'mailing_list_address': address(node._id),
     return data
 
 def get_affiliated_institutions(obj):
