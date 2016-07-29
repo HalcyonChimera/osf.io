@@ -20,7 +20,7 @@ from modularodm.validators import MaxLengthValidator
 from modularodm.exceptions import NoResultsFound
 from modularodm.exceptions import ValidationValueError
 
-from framework import status, discourse
+from framework import status
 from framework.mongo import ObjectId
 from framework.mongo import StoredObject
 from framework.mongo import validators
@@ -976,10 +976,6 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin, Commentable):
         """The object "type" used in the OSF v2 API."""
         return 'nodes'
 
-    # For Discourse API compatibility
-    def get_guid_id(self):
-        return self._id
-
     @property
     def root_target_page(self):
         """The comment page type associated with Nodes."""
@@ -1722,10 +1718,6 @@ class Node(GuidStoredObject, AddonModelMixin, IdentifierMixin, Commentable):
         # This method checks what has changed.
         if settings.PIWIK_HOST and update_piwik:
             piwik_tasks.update_node(self._id, saved_fields)
-
-        # For project public/private and contributors
-        #discourse.sync_project(self)
-
 
         # Return expected value for StoredObject::save
         return saved_fields

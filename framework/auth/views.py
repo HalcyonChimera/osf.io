@@ -246,7 +246,6 @@ def auth_login(auth, **kwargs):
                 or next_url.startswith(settings.DOMAIN)
                 or next_url.startswith(settings.CAS_SERVER_URL)
                 or next_url.startswith(settings.MFR_SERVER_URL)
-                or next_url.startswith(settings.DISCOURSE_SERVER_URL)):
             raise HTTPError(http.InvalidURL)
 
     if auth.logged_in:

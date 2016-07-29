@@ -20,7 +20,7 @@
                 <span data-bind="if: page() == 'node'"><span data-bind="text: pageTitle"></span> | Discussion</span>
             </h4>
 
-            <div data-bind="if: canComment" style="margin-top: 20px">
+            <div data-bind="if: canComment">
                 <form class="form">
                     <div class="form-group">
                         <span>
@@ -58,3 +58,4 @@
     </div>
 
 </div>
+<%include file="comment_template.mako" />

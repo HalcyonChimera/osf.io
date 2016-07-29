@@ -12,7 +12,6 @@ var $osf = require('js/osfHelpers');
 require('css/addonsettings.css');
 
 var ctx = window.contextVars;
-console.log(ctx)
 var ProjectNotifications = require('js/notificationsTreebeard.js');
 var $notificationsMsg = $('#configureNotificationsMessage');
 var notificationsURL = ctx.node.urls.api  + 'subscriptions/';

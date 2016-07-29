@@ -8,13 +8,10 @@ import datetime
 import requests
 import functools
 
-import pdb
-
 from modularodm import fields, Q
 from modularodm.exceptions import NoResultsFound
 from dateutil.parser import parse as parse_date
 
-from framework import discourse
 from framework.guid.model import Guid
 from framework.mongo import StoredObject
 from framework.mongo.utils import unique_on
@@ -67,10 +64,6 @@ class TrashedFileNode(StoredObject, Commentable):
     name = fields.StringField(required=True)
     path = fields.StringField(required=True)
     materialized_path = fields.StringField(required=True)
-
-    discourse_topic_id = fields.StringField(default=None)
-    discourse_topic_public = fields.BooleanField(default=False)
-    discourse_post_id = fields.StringField(dafault=None)
 
     checkout = fields.AbstractForeignField('User')
     deleted_by = fields.AbstractForeignField('User')
@@ -204,10 +197,6 @@ class StoredFileNode(StoredObject, Commentable):
     path = fields.StringField(required=True)
     materialized_path = fields.StringField(required=True)
 
-    discourse_topic_id = fields.StringField(default=None)
-    discourse_topic_public = fields.BooleanField(default=False)
-    discourse_post_id = fields.StringField(dafault=None)
-
     # The User that has this file "checked out"
     # Should only be used for OsfStorage
     checkout = fields.AbstractForeignField('User')
@@ -282,17 +271,6 @@ class StoredFileNode(StoredObject, Commentable):
             if not create:
                 return None
         return Guid.generate(self)
-
-    # for Discourse compatibility
-    @property
-    def guid_id(self):
-        return self.get_guid()._id
-
-    # For Discourse API compatibility
-    @property
-    def label(self):
-        return self.name
-
 
 class FileNodeMeta(type):
     """Keeps track of subclasses of the ``FileNode`` object
@@ -543,7 +521,6 @@ class FileNode(object):
         self._repoint_guids(trashed)
         self.node.save()
         StoredFileNode.remove_one(self.stored_object)
-        discourse.delete_topic(self)
         return trashed
 
     def copy_under(self, destination_parent, name=None):
@@ -581,8 +558,6 @@ class FileNode(object):
             versions=self.versions,
             last_touched=self.last_touched,
             materialized_path=self.materialized_path,
-            discourse_topic_id=self.discourse_topic_id,
-
             deleted_by=user
         )
         if save:
