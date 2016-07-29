@@ -33,11 +33,7 @@
                 </h2>
             </div>
             <div class="col-sm-7 col-md-5">
-                <div class="btn-toolbar node-control pull-right"
-                    % if not user_name:
-                        data-bind="tooltip: {title: 'Log-in or create an account to watch/duplicate this project', placement: 'bottom'}"
-                    % endif
-                     >
+                <div class="btn-toolbar node-control pull-right">
                     <div class="btn-group">
                     % if not node["is_public"]:
                         <button class="btn btn-default disabled">Private</button>
@@ -56,6 +52,7 @@
                         <button class="btn btn-default disabled">Public</button>
                     % endif
                     </div>
+
                     <!-- ko if: canBeOrganized -->
                     <div class="btn-group" style="display: none;" data-bind="visible: true">
 
@@ -76,18 +73,22 @@
 
                     </div>
                     <!-- /ko -->
-                    <div class="btn-group">
-                        <a
-                        % if user_name:
-                            class="btn btn-default"
-                            data-bind="tooltip: {title: 'Duplicate', placement: 'bottom', container : 'body'}"
-                            data-target="#duplicateModal" data-toggle="modal"
-                        % else:
-                            class="btn btn-default disabled"
+                    <div class="btn-group"
+                        % if not user_name:
+                            data-bind="tooltip: {title: 'Log in or create an account to duplicate this project', placement: 'top'}"
                         % endif
-                            href="#">
-                            <span class="glyphicon glyphicon-share"></span>&nbsp; ${ node['templated_count'] + node['fork_count'] + node['points'] }
-                        </a>
+                        >
+                            <a
+                            % if user_name:
+                                class="btn btn-default"
+                                data-bind="tooltip: {title: 'Duplicate', placement: 'bottom', container : 'body'}"
+                                data-target="#duplicateModal" data-toggle="modal"
+                            % else:
+                                class="btn btn-default disabled"
+                            % endif
+                                href="#">
+                                <span class="glyphicon glyphicon-share"></span>&nbsp; ${ node['templated_count'] + node['fork_count'] + node['points'] }
+                            </a>
                     </div>
                     % if 'badges' in addons_enabled and badges and badges['can_award']:
                         <div class="btn-group">
@@ -95,6 +96,9 @@
                                 <i class="fa fa-plus"></i> Award
                             </button>
                         </div>
+                    % endif
+                    % if node["is_public"]:
+                    <div class="btn-group" id="shareButtonsPopover"></div>
                     % endif
                 </div>
             </div>
@@ -234,8 +238,6 @@
 <%def name="title()">${node['title']}</%def>
 
 <%include file="project/modal_add_pointer.mako"/>
-
-<%include file="project/modal_add_component.mako"/>
 
 % if user['can_comment'] or node['has_comments']:
     <%include file="include/comment_pane_template.mako"/>
@@ -385,8 +387,20 @@
 
         %endif
 
-
-        <%include file="log_list.mako" args="scripted=True" />
+        <!-- Recent Activity (Logs) -->
+        <div class="panel panel-default">
+            <div class="panel-heading clearfix">
+                <h3 class="panel-title">Recent Activity</h3>
+            </div>
+            <div class="panel-body">
+                <div id="logFeed">
+                    <div class="spinner-loading-wrapper">
+                        <div class="logo-spin logo-lg"></div>
+                         <p class="m-t-sm fg-load-message"> Loading logs...  </p>
+                    </div>
+                </div>
+            </div>
+        </div>
 
     </div>
 
@@ -399,7 +413,9 @@
             <h3 class="panel-title" style="padding-bottom: 5px; padding-top: 5px;">Components </h3>
             <div class="pull-right">
                 % if 'write' in user['permissions'] and not node['is_registration']:
-                    <a class="btn btn-sm btn-default" data-toggle="modal" data-target="#newComponent">Add Component</a>
+                    <span id="newComponent">
+                        <button class="btn btn-sm btn-default" disabled="true">Add Component</button>
+                    </span>
                     <a class="btn btn-sm btn-default" data-toggle="modal" data-target="#addPointer">Add Links</a>
                 % endif
             </div>
@@ -409,7 +425,7 @@
                 <div id="containment">
                     <div mod-meta='{
                         "tpl": "util/render_nodes.mako",
-                        "uri": "${node["api_url"]}get_children/",
+                        "uri": "${node["api_url"]}get_readable_descendants/",
                         "replace": true,
                         "kwargs": {
                           "sortable" : ${'true' if not node['is_registration'] else 'false'},
@@ -454,12 +470,19 @@ ${parent.javascript_bottom()}
             canEdit: ${ user['can_edit'] | sjson, n },
         },
         node: {
+            id: ${node['id'] | sjson, n},
             hasChildren: ${ node['has_children'] | sjson, n },
             isRegistration: ${ node['is_registration'] | sjson, n },
             tags: ${ node['tags'] | sjson, n },
             institutions: ${node['institutions'] | sjson, n},
         },
-        nodeCategories: ${ node_categories | sjson, n }
+        nodeCategories: ${ node_categories | sjson, n },
+        analyticsMeta: {
+            pageMeta: {
+                title: 'Home',
+                public: true,
+            },
+        },
     });
 </script>
 

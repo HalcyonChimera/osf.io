@@ -305,6 +305,9 @@ class TestUserMerging(base.OsfTestCase):
         self.user.email_verifications = {'user': {'email': 'a'}}
         other_user.email_verifications = {'other': {'email': 'b'}}
 
+        self.user.notifications_configured = {'abc12': True}
+        other_user.notifications_configured = {'123ab': True}
+
         self.user.external_accounts = [factories.ExternalAccountFactory()]
         other_user.external_accounts = [factories.ExternalAccountFactory()]
 
@@ -370,7 +373,8 @@ class TestUserMerging(base.OsfTestCase):
             'verification_key',
             '_affiliated_institutions',
             'contributor_added_email_records',
-            'requested_deactivation'
+            'requested_deactivation',
+            'registered_by'
         ]
 
         calculated_fields = {
@@ -383,6 +387,9 @@ class TestUserMerging(base.OsfTestCase):
             'email_verifications': {
                 'user': {'email': 'a'},
                 'other': {'email': 'b'},
+            },
+            'notifications_configured': {
+                '123ab': True, 'abc12': True,
             },
             'emails': [
                 self.user.username,

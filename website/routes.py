@@ -5,11 +5,12 @@ import httplib as http
 from flask import request
 from flask import send_from_directory
 
+from geoip import geolite2
+
 from framework import status
 from framework import sentry
 from framework.auth import cas
 from framework.routing import Rule
-from framework.mongo import database
 from framework.flask import redirect
 from framework.routing import WebRenderer
 from framework.exceptions import HTTPError
@@ -31,6 +32,7 @@ from website import language
 from website.util import metrics
 from website.util import paths
 from website.util import sanitize
+from website import maintenance
 from website.models import Institution
 from website import landing_pages as landing_page_views
 from website import views as website_views
@@ -47,6 +49,7 @@ from website.institutions import views as institution_views
 from website.notifications import views as notification_views
 from website.mailing_list import views as mailing_list_views
 
+
 def get_globals():
     """Context variables that are available for every template rendered by
     OSFWebRenderer.
@@ -54,17 +57,15 @@ def get_globals():
     user = _get_current_user()
     user_institutions = [{'id': inst._id, 'name': inst.name, 'logo_path': inst.logo_path} for inst in user.affiliated_institutions] if user else []
     all_institutions = [{'id': inst._id, 'name': inst.name, 'logo_path': inst.logo_path} for inst in Institution.find().sort('name')]
-    maintenance = database.maintenance.find_one({'maintenance': True})
-    if maintenance:
-        del maintenance['_id']
+    location = geolite2.lookup(request.remote_addr) if request.remote_addr else None
     if request.host_url != settings.DOMAIN:
         try:
             inst_id = (Institution.find_one(Q('domains', 'eq', request.host.lower())))._id
-            login_url = '{}institutions/{}'.format(settings.DOMAIN, inst_id)
+            request_login_url = '{}institutions/{}'.format(settings.DOMAIN, inst_id)
         except NoResultsFound:
-            login_url = request.url.replace(request.host_url, settings.DOMAIN)
+            request_login_url = request.url.replace(request.host_url, settings.DOMAIN)
     else:
-        login_url = request.url
+        request_login_url = request.url
     return {
         'private_link_anonymous': is_private_link_anonymous_view(),
         'user_name': user.username if user else '',
@@ -80,14 +81,17 @@ def get_globals():
         'user_institutions': user_institutions if user else None,
         'all_institutions': all_institutions,
         'display_name': get_display_name(user.fullname) if user else '',
+        'anon': {
+            'continent': getattr(location, 'continent', None),
+            'country': getattr(location, 'country', None),
+        },
         'use_cdn': settings.USE_CDN_FOR_CLIENT_LIBS,
-        'piwik_host': settings.PIWIK_HOST,
-        'piwik_site_id': settings.PIWIK_SITE_ID,
         'sentry_dsn_js': settings.SENTRY_DSN_JS if sentry.enabled else None,
         'dev_mode': settings.DEV_MODE,
         'allow_login': settings.ALLOW_LOGIN,
         'cookie_name': settings.COOKIE_NAME,
         'status': status.pop_status_messages(),
+        'prev_status': status.pop_previous_status_messages(),
         'domain': settings.DOMAIN,
         'api_domain': settings.API_DOMAIN,
         'disk_saving_mode': settings.DISK_SAVING_MODE,
@@ -102,14 +106,23 @@ def get_globals():
         'sjson': lambda s: sanitize.safe_json(s),
         'webpack_asset': paths.webpack_asset,
         'waterbutler_url': settings.WATERBUTLER_URL,
-        'login_url': cas.get_login_url(login_url, auto=True),
+        'login_url': cas.get_login_url(request_login_url),
         'reauth_url': util.web_url_for('auth_logout', redirect_url=request.url, reauth=True),
         'profile_url': cas.get_profile_url(),
         'enable_institutions': settings.ENABLE_INSTITUTIONS,
-        'keen_project_id': settings.KEEN_PROJECT_ID,
-        'keen_write_key': settings.KEEN_WRITE_KEY,
-        'maintenance': maintenance,
+        'keen': {
+            'public': {
+                'project_id': settings.KEEN['public']['project_id'],
+                'write_key': settings.KEEN['public']['write_key'],
+            },
+            'private': {
+                'project_id': settings.KEEN['private']['project_id'],
+                'write_key': settings.KEEN['private']['write_key'],
+            },
+        },
+        'maintenance': maintenance.get_maintenance(),
     }
+
 
 def is_private_link_anonymous_view():
     try:
@@ -166,6 +179,7 @@ def goodbye():
         return redirect(util.web_url_for('index'))
     status.push_status_message(language.LOGOUT, kind='success', trust=False)
     return {}
+
 
 def make_url_map(app):
     """Set up all the routes for the OSF app.
@@ -256,6 +270,7 @@ def make_url_map(app):
             {},
             OsfWebRenderer('public/explore.mako', trust=False)
         ),
+
         Rule(
             [
                 '/messages/',
@@ -436,10 +451,8 @@ def make_url_map(app):
     ### Forms ###
 
     process_rules(app, [
-        Rule('/forms/registration/', 'get', website_views.registration_form, json_renderer),
         Rule('/forms/signin/', 'get', website_views.signin_form, json_renderer),
         Rule('/forms/forgot_password/', 'get', website_views.forgot_password_form, json_renderer),
-        Rule('/forms/reset_password/', 'get', website_views.reset_password_form, json_renderer),
     ], prefix='/api/v1')
 
     ### Discovery ###
@@ -456,42 +469,66 @@ def make_url_map(app):
 
     ### Auth ###
 
-    # Web
-
     process_rules(app, [
 
+        # confirm email
         Rule(
             '/confirm/<uid>/<token>/',
             'get',
             auth_views.confirm_email_get,
-            # View will either redirect or display error message
             notemplate
         ),
 
+        # reset password get
         Rule(
             '/resetpassword/<verification_key>/',
-            ['get', 'post'],
-            auth_views.reset_password,
+            'get',
+            auth_views.reset_password_get,
             OsfWebRenderer('public/resetpassword.mako', render_mako_string, trust=False)
         ),
 
-        # Resend confirmation URL linked to in CAS login page
+        # reset password post
+        Rule(
+            '/resetpassword/<verification_key>/',
+            'post',
+            auth_views.reset_password_post,
+            OsfWebRenderer('public/resetpassword.mako', render_mako_string, trust=False)
+        ),
+
+        # resend confirmation get
         Rule(
             '/resend/',
-            ['get', 'post'],
-            auth_views.resend_confirmation,
+            'get',
+            auth_views.resend_confirmation_get,
             OsfWebRenderer('resend.mako', render_mako_string, trust=False)
         ),
 
-        # TODO: Remove `auth_register_post`
+        # resend confirmation post
+        Rule(
+            '/resend/',
+            'post',
+            auth_views.resend_confirmation_post,
+            OsfWebRenderer('resend.mako', render_mako_string, trust=False)
+
+        ),
+
+        # user sign up page
         Rule(
             '/register/',
-            'post',
-            auth_views.auth_register_post,
+            'get',
+            auth_views.auth_register,
             OsfWebRenderer('public/login.mako', trust=False)
         ),
-        Rule('/api/v1/register/', 'post', auth_views.register_user, json_renderer),
 
+        # create user account via api
+        Rule(
+            '/api/v1/register/',
+            'post',
+            auth_views.register_user,
+            json_renderer
+        ),
+
+        # osf login and campaign login
         Rule(
             [
                 '/login/',
@@ -501,58 +538,43 @@ def make_url_map(app):
             auth_views.auth_login,
             OsfWebRenderer('public/login.mako', trust=False)
         ),
-        Rule(
-            '/login/first/',
-            'get',
-            auth_views.auth_login,
-            OsfWebRenderer('public/login.mako', trust=False),
-            endpoint_suffix='__first', view_kwargs={'first': True}
-        ),
+
+        # osf logout and cas logout
         Rule(
             '/logout/',
             'get',
             auth_views.auth_logout,
             notemplate
         ),
+
+        # forgot password get
         Rule(
             '/forgotpassword/',
             'get',
             auth_views.forgot_password_get,
             OsfWebRenderer('public/forgot_password.mako', trust=False)
         ),
+
+        # forgot password post
         Rule(
             '/forgotpassword/',
             'post',
             auth_views.forgot_password_post,
-            OsfWebRenderer('public/login.mako', trust=False)
+            OsfWebRenderer('public/forgot_password.mako', trust=False)
         ),
 
-        Rule(
-            [
-                '/midas/',
-                '/summit/',
-                '/accountbeta/',
-                '/decline/'
-            ],
-            'get',
-            auth_views.auth_registerbeta,
-            notemplate
-        ),
-
-        # FIXME or REDIRECTME: This redirects to settings when logged in, but gives an error (no template) when logged out
         Rule(
             '/login/connected_tools/',
             'get',
             landing_page_views.connected_tools,
-            OsfWebRenderer('public/login_landing.mako', trust=False)
+            notemplate
         ),
 
-        # FIXME or REDIRECTME: mod-meta error when logged out: signin form not rendering for login_landing sidebar
         Rule(
             '/login/enriched_profile/',
             'get',
             landing_page_views.enriched_profile,
-            OsfWebRenderer('public/login_landing.mako', trust=False)
+            notemplate
         ),
 
     ])
@@ -568,24 +590,14 @@ def make_url_map(app):
             profile_views.profile_view,
             OsfWebRenderer('profile.mako', trust=False)
         ),
+
         Rule(
             '/profile/<uid>/',
             'get',
             profile_views.profile_view_id,
             OsfWebRenderer('profile.mako', trust=False)
         ),
-        Rule(
-            ['/user/merge/'],
-            'get',
-            auth_views.merge_user_get,
-            OsfWebRenderer('merge_accounts.mako', trust=False)
-        ),
-        Rule(
-            ['/user/merge/'],
-            'post',
-            auth_views.merge_user_post,
-            OsfWebRenderer('merge_accounts.mako', trust=False)
-        ),
+
         # Route for claiming and setting email and password.
         # Verification token must be querystring argument
         Rule(
@@ -594,6 +606,7 @@ def make_url_map(app):
             project_views.contributor.claim_user_form,
             OsfWebRenderer('claim_account.mako', trust=False)
         ),
+
         Rule(
             ['/user/<uid>/<pid>/claim/verify/<token>/'],
             ['get', 'post'],
@@ -893,6 +906,7 @@ def make_url_map(app):
     process_rules(app, [
         # '/' route loads home.mako if logged in, otherwise loads landing.mako
         Rule('/', 'get', website_views.index, OsfWebRenderer('index.mako', trust=False)),
+
         Rule('/goodbye/', 'get', goodbye, OsfWebRenderer('landing.mako', trust=False)),
 
         Rule(
@@ -1090,6 +1104,15 @@ def make_url_map(app):
         ),
         Rule(
             [
+                '/api/v1/project/<pid>/files/<provider>/<path:path>/',
+                '/api/v1/project/<pid>/node/<nid>/files/<provider>/<path:path>/',
+            ],
+            'get',
+            addon_views.addon_view_or_download_file,
+            json_renderer
+        ),
+        Rule(
+            [
                 '/project/<pid>/files/deleted/<trashed_id>/',
                 '/project/<pid>/node/<nid>/files/deleted/<trashed_id>/',
             ],
@@ -1244,11 +1267,13 @@ def make_url_map(app):
             '/project/<pid>/get_summary/',
             '/project/<pid>/node/<nid>/get_summary/',
         ], 'get', project_views.node.get_summary, json_renderer),
-
+        # TODO: [#OSF-6557] Route "get_children" is deprecated. Use get_readable_descendants.
         Rule([
             '/project/<pid>/get_children/',
             '/project/<pid>/node/<nid>/get_children/',
-        ], 'get', project_views.node.get_children, json_renderer),
+            '/project/<pid>/get_readable_descendants/',
+            '/project/<pid>/node/<nid>/get_readable_descendants/',
+        ], 'get', project_views.node.get_readable_descendants, json_renderer),
         Rule([
             '/project/<pid>/get_forks/',
             '/project/<pid>/node/<nid>/get_forks/',
@@ -1279,13 +1304,6 @@ def make_url_map(app):
         Rule([
             '/project/drafts/schemas/',
         ], 'get', project_views.drafts.get_metaschemas, json_renderer),
-
-        Rule('/log/<log_id>/', 'get', project_views.log.get_log, json_renderer),
-
-        Rule([
-            '/project/<pid>/log/',
-            '/project/<pid>/node/<nid>/log/',
-        ], 'get', project_views.log.get_logs, json_renderer),
 
         Rule([
             '/project/<pid>/get_contributors/',
@@ -1497,15 +1515,6 @@ def make_url_map(app):
             '/project/<pid>/node/<nid>/togglewatch/'
         ], 'post', project_views.node.togglewatch_post, json_renderer),
 
-        Rule([
-            '/watched/logs/'
-        ], 'get', website_views.watched_logs_get, json_renderer),
-
-        ### Accounts ###
-        Rule([
-            '/user/merge/'
-        ], 'post', auth_views.merge_user_post, json_renderer),
-
         # Combined files
         Rule(
             [
@@ -1608,7 +1617,12 @@ def make_url_map(app):
             notification_views.configure_subscription,
             json_renderer,
         ),
-
+        Rule(
+            '/resetpassword/<verification_key>/',
+            'post',
+            auth_views.reset_password_post,
+            json_renderer,
+        ),
         Rule(
             [
                 '/project/<pid>/settings/addons/',

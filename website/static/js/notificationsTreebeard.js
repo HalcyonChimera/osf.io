@@ -150,13 +150,26 @@ function ProjectNotifications(data) {
                     folderIcons : false,
                     filter : false,
                     custom : function(item, col) {
+                        var mentionsInTitle = ~item.data.event.title.indexOf('mentions');
+                        var notificationOptions;
+                        if (mentionsInTitle)
+                            notificationOptions = [m('option', {value: 'email_transactional', selected: 'email_transactional', disabled: true}, 'Instantly')];
+                        else {
+                            var type = item.data.event.notificationType;
+                            notificationOptions = [
+                                m('option', {value: 'none', selected : type === 'none' ? 'selected': ''}, 'Never'),
+                                m('option', {value: 'email_transactional', selected : type === 'email_transactional' ? 'selected': ''}, 'Instantly'),
+                                m('option', {value: 'email_digest', selected : type === 'email_digest' ? 'selected': ''}, 'Daily')
+                            ];
+                        }
                         return m('div[style="padding-right:10px"]',
                             [m('select.form-control', {
                                 onchange: function(ev) {
                                     subscribe(item, ev.target.value);
                                 }},
-                                options)
-                        ]);
+                                notificationOptions
+                            )]
+                        );
                     }
                 });
             }

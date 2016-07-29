@@ -180,7 +180,7 @@ def get_configured_projects(user):
         if (
             not isinstance(node, Node) or
             (user in subscription.none and not node.parent_id) or
-            not node.notification_settings_dirty or
+            node._id not in user.notifications_configured or
             node.is_collection
         ):
             continue
@@ -415,6 +415,17 @@ def check_if_all_global_subscriptions_are_none(user):
                 return False
 
     return all_global_subscriptions_none
+
+
+def subscribe_user_to_global_notifications(user):
+    notification_type = 'email_transactional'
+    user_events = constants.USER_SUBSCRIPTIONS_AVAILABLE
+    for user_event in user_events:
+        user_event_id = to_subscription_key(user._id, user_event)
+
+        subscription = NotificationSubscription(_id=user_event_id, owner=user, event_name=user_event)
+        subscription.add_user_to_subscription(user, notification_type)
+        subscription.save()
 
 
 def subscribe_user_to_notifications(node, user):
