@@ -50,21 +50,31 @@ else:
 class MailingListError():
     pass
 
+
 def with_list_proxy(fn):
+    @app.task(name=fn.__name__)
+    def get_proxy(*args, **kwargs):
+
+        print()
+        #from celery.contrib import rdb; rdb.set_trace()
+        try:
+            kwargs['list_proxy'] = mc.get_list('{}@{}'.format(kwargs['list_mailbox'], settings.OSF_MAILING_LIST_DOMAIN))
+        except:
+            kwargs['list_proxy'] = mail_domain.create_list(kwargs['list_mailbox'])
+        fn(*args, **kwargs)
     def _fn(*args, **kwargs):
-        print(args)
-        print(kwargs)
-        @app.task
-        def get_proxy(*args, **kwargs):
-            try:
-                kwargs['list_proxy'] = mc.get_list('{}@{}'.format(kwargs['list_mailbox'], settings.OSF_MAILING_LIST_DOMAIN))
-            except:
-                kwargs['list_proxy'] = mail_domain.create_list(kwargs['list_mailbox'])
-            fn(*args, **kwargs)
+        if kwargs.get('contributors'):
+            kwargs['contributors'] = list(map(lambda contributor: ensure_user_as_id(contributor), kwargs['contributors']))
         if kwargs.get('list_proxy'):
             fn(*args, **kwargs)
         else:
-            get_proxy.apply_async(*args, **kwargs)
+            print('')
+            print(fn.__name__)
+            print(args)
+            print(kwargs)
+            print('')
+            get_proxy.apply_async(args=args, kwargs=kwargs)
+            #get_proxy(*args, **kwargs)
     return _fn
 
 # If we call this, we need a mailing list. If it doesn't exist yet, we should 
@@ -72,17 +82,18 @@ def with_list_proxy(fn):
 # This calls out to another server, so we should not be block.
 @with_list_proxy 
 def upsert_list(list_title=None, list_description=None, list_proxy=None, list_mailbox=None, contributors=None, public=False):
-    #try:
-    #    list_proxy = mc.get_list('{}@{}'.format(list_mailbox, settings.OSF_MAILING_LIST_DOMAIN))
-    #except:
-    #    list_proxy = mail_domain.create_list(list_mailbox)
     stt = list_proxy.settings
     stt[u'display_name'] = list_title
     stt[u'description'] = list_description
     stt[u'archive_policy'] = 'public' if public else 'private'
-    #from celery.contrib import rdb; rdb.set_trace()
     stt.save()
-    contributors and add_contributors(list_proxy=list_proxy, contributors=contributors)
+    contributors and add_contributors(list_mailbox=list_mailbox, contributors=contributors)
+
+def ensure_user_as_id(contributor):
+    if not isinstance(contributor, unicode):
+        return contributor._id
+    else:
+        return contributor
 
 @user_confirmed.connect
 def subscribe_on_confirm(user):
@@ -100,7 +111,14 @@ def add_contributor(list_mailbox=None, list_proxy=None, contributor=None):
             return False
         except:
             return True
+    #print(list_mailbox)
+    #print(list_proxy)
+    #print(contributor)
+    contributor = User.load(contributor)
+    print(contributor)
+    print(contributor.emails)
     to_sub = list(filter(not_subbed, contributor.emails))
+    print(to_sub)
     map(lambda email: list_proxy.subscribe(
         email,
         contributor.fullname,
@@ -108,15 +126,15 @@ def add_contributor(list_mailbox=None, list_proxy=None, contributor=None):
         pre_confirmed = True
         ), to_sub)
 
-def add_contributors(list_proxy=None, contributors=None):
-    map(lambda contributor: add_contributor(list_proxy=list_proxy, contributor=contributor), contributors)
+def add_contributors(list_mailbox=None, contributors=None):
+    contributors = list(map(lambda contributor: ensure_user_as_id(contributor), contributors))
+    map(lambda contributor: add_contributor(list_mailbox=list_mailbox, contributor=contributor), contributors)
 
 @contributor_added.connect
 def contributor_added_handler(node, contributor, auth=None, throttle=None):
-    add_contributor(list_mailbox=node._id, contributor=contributor)
+    add_contributor(list_mailbox=node._id, contributor=contributor._id)
 
 @with_list_proxy
-@app.task
 def remove_contributor(list_proxy, contributor):
     def subbed(email):
         try:
@@ -127,14 +145,12 @@ def remove_contributor(list_proxy, contributor):
     to_unsub = list(filter(subbed, contributor.emails))
     map(lambda email: list_proxy.unsubscribe(email))
 
+def remove_contributors(list_proxy, contributors):
+    map(lambda contributor: remove_contributor(list_proxy=list_proxy, contributor=contributor), contributors)
+
 @contributor_removed.connect
 def contributor_removed_handler(node, contributor, auth=None, throttle=None):
     remove_contributor(node._id, contributor)
-
-@with_list_proxy
-def remove_contributors(list_proxy, contributors):
-    map(lambda contributor: remove_contributor(list_proxy, contributor), contributors)
-
 
 
 ###############################################################################
@@ -264,13 +280,9 @@ def update_single_user_in_list(node_id, user_id, email=None, enabled=True, old_e
     :param bool enabled: Enable or disable user?
     :param str old_email: Previous email of this user in list, included when user changes primary email.
     """
-    from website.models import Node, User  # avoid circular import
-    node = Node.load(node_id)
-    user = User.load(user_id)
-    email = email or user.username
 
-    if old_email:
-        pass
+    add_contributor(list_mailbox=node_id, list_proxy=None, contributor=user_id)
+
     #    resp = requests.put(
     #        '{}/{}/members/{}'.format(MAILGUN_BASE_LISTS_URL, address(node_id), old_email),
     #        auth=('api', settings.MAILGUN_API_KEY),
