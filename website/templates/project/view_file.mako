@@ -80,18 +80,31 @@
         </div>
        %endif
   </div>
+<style>
+    #fileViewPanelLeft {
+        display: flex;
+        padding: 0;
+
+    }
+    #fileViewPanelLeft > div {
+        flex: 1 0 auto;
+        position: relative;
+        margin: 0 15px;
+    }
+    #fileViewPanelLeft > div.hidden {
+        display: none;
+    }
+</style>
 
 <!-- The osf-logo spinner here is from mfr code base -->
   <div id="fileViewPanelLeft" class="col-sm-9 panel-expand">
-    <div class="row">
-        <div id="externalView" class="col-sm-9"></div>
-        <div id="mfrIframeParent" class="col-sm-9">
-            <div id="mfrIframe" class="mfr mfr-file"></div>
-        </div>
+    <div id="externalView" class="hidden"></div>
+    <div id="mfrIframeParent" class="">
+      <div id="mfrIframe" class="mfr mfr-file"></div>
+    </div>
 
     <!-- This section is built by mithril in revisions.js -->
-      <div class="file-view-panels col-sm-3"></div>
-    </div>
+    <div class="file-view-panels"></div>
   </div>
 </div>
 

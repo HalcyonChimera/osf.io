@@ -452,17 +452,17 @@ var FileViewPage = {
 
         if (panelsShown === 2) {
             // view | edit
-            mfrIframeParentLayout = 'col-sm-6';
-            fileViewPanelsLayout = 'col-sm-6';
+            mfrIframeParentLayout = '';
+            fileViewPanelsLayout = '';
         } else {
             // view
             if (ctrl.mfrIframeParent.is(':visible')) {
-                mfrIframeParentLayout = 'col-sm-12';
-                fileViewPanelsLayout = '';
+                mfrIframeParentLayout = '';
+                fileViewPanelsLayout = 'hidden';
             } else {
                 // edit or revisions
-                mfrIframeParentLayout = '';
-                fileViewPanelsLayout = 'col-sm-12';
+                mfrIframeParentLayout = 'hidden';
+                fileViewPanelsLayout = '';
             }
         }
         $('#mfrIframeParent').removeClass().addClass(mfrIframeParentLayout);
@@ -552,6 +552,7 @@ var FileViewPage = {
                 m('button.btn.btn-sm' + (ctrl.revisions.selected ? '.btn-primary': '.btn-default'), {onclick: function(){
                     var editable = ctrl.editor && ctrl.editor.selected;
                     var viewable = ctrl.mfrIframeParent.is(':visible');
+                    debugger;
                     if (editable || viewable){
                         if (viewable){
                             ctrl.mfrIframeParent.toggle();
@@ -575,14 +576,14 @@ var FileViewPage = {
 
         if (ctrl.revisions.selected){
             return m('.file-view-page', m('.panel-toggler', [
-                m('.row', ctrl.revisions)
+                m('div', ctrl.revisions)
             ]));
         }
         var editDisplay = (ctrl.editor && !ctrl.editor.selected) ? 'display:none' : '' ;
         ctrl.triggerResize();
         return m('.file-view-page', m('.panel-toggler', [
-            m('.row[style="' + editDisplay + '"]', m('.col-sm-12', ctrl.editor),
-             m('.row[style="display:none"]', ctrl.revisions))
+            m('div[style="' + editDisplay + '"]', m('.col-sm-12', ctrl.editor),
+             m('div[style="display:none"]', ctrl.revisions))
         ]));
     }
 };
