@@ -728,6 +728,9 @@ def addon_view_or_download_file(auth, path, provider, **kwargs):
     savepoint_id = transaction.savepoint()
     file_node = BaseFileNode.resolve_class(provider, BaseFileNode.FILE).get_or_create(target, path)
 
+    # This makes a request to WaterButler to get metadata about the file if it
+    # exists. The implementation for `.touch` may be provider specific.
+
     # Note: Cookie is provided for authentication to waterbutler
     # it is overriden to force authentication as the current user
     # the auth header is also pass to support basic auth
@@ -839,7 +842,6 @@ def addon_view_or_download_quickfile(**kwargs):
 def addon_view_file(auth, node, file_node, version):
     # TODO: resolve circular import issue
     from addons.wiki import settings as wiki_settings
-
     if isinstance(version, tuple):
         version, error = version
         error = error.replace('\n', '').strip()

@@ -136,7 +136,7 @@ RUN bower install --production --allow-root \
     && bower cache clean --allow-root
 
 COPY ./package.json ./.yarnrc ./yarn.lock ./
-RUN yarn install --frozen-lockfile \
+RUN yarn install --frozen-lockfile --no-cache --network-concurrency 1 \
     && yarn cache clean
 
 COPY ./tasks/ ./tasks/
@@ -181,7 +181,7 @@ RUN cd ./admin \
 
 COPY ./admin/package.json ./admin/yarn.lock ./admin/
 RUN cd ./admin \
-    && yarn install --frozen-lockfile \
+    && yarn install --frozen-lockfile --no-cache --network-concurrency 1 \
     && yarn cache clean
 
 COPY ./admin/webpack* ./admin/
