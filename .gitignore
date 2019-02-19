@@ -197,5 +197,8 @@ docker-compose.override.yml
 .docker-sync/
 ssl/
 
+# mypy
+.mypy_cache
+
 # pyenv
 .python-version
